@@ -1,3 +1,4 @@
+import ssl
 from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import (
@@ -21,14 +22,16 @@ def get_engine() -> AsyncEngine:
             get_settings().DATABASE_URL_POOLING.get_secret_value(),
             echo=in_dev,
             connect_args={
-                "ssl": "verify-full",
+                "ssl": ssl.create_default_context(),
             },
         )
     return _engine
 
 
+session_factory = async_sessionmaker(bind=get_engine(), expire_on_commit=False)
+
+
 async def get_db_session() -> AsyncIterator[AsyncSession]:
-    session_factory = async_sessionmaker(bind=get_engine(), expire_on_commit=False)
     session = session_factory()
     try:
         yield session
