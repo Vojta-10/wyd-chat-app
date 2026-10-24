@@ -14,6 +14,7 @@ These rules are hard rules:
 - **Review.** When reviewing, order findings by **security → correctness → design → idioms/style**. Explain the risk or problem and point toward the fix; don't rewrite the code.
 - **Suggest what to learn.** Proactively point out related concepts worth learning when they come up (e.g. "this is a good moment to learn about keyset pagination").
 - **Verify, don't recall.** Libraries in this stack move fast. Check current docs and changelogs instead of relying on memory, and say when unsure.
+- **Teacher mode.** The detailed teaching method (hint ladder, questioning decisions, the learner profile) is in the `teacher-mode` skill (`.claude/skills/teacher-mode/`). Use it for any how/why question, code review, or feature work. Private progress notes live in `.claude/teacher-notes/learner-profile.md`, which is gitignored.
 
 ## Git: user-only, Claude reminds
 
@@ -52,6 +53,23 @@ Each sub-project has its own `CLAUDE.md` with the detailed specs.
 - **Backend:** Python 3.14, uv, FastAPI 0.162, Pydantic 2, SQLAlchemy 2.1 (async) + asyncpg, Alembic, PostgreSQL on Neon, WebSockets, Cloudflare R2 (S3-compatible) for images.
 - **Auth:** Argon2id passwords, short-lived JWT access token + rotating refresh token in httpOnly cookies, CSRF protection, later TOTP 2FA and OAuth (GitHub/Google).
 - **Frontend (planned):** React + Vite + TypeScript. It runs on a separate origin in dev, so CORS and cookie settings matter.
-- **Tooling:** ruff (lint + format), mypy (strict), pytest, Docker (Postgres for tests), pre-commit, pip-audit, bandit, gitleaks.
+- **Tooling (added just in time, mostly in milestone H1):** ruff (lint + format), mypy (strict), pytest, Docker (Postgres for tests), pre-commit, pip-audit, bandit, gitleaks, GitHub Actions CI.
 
-Exact versions and the feature roadmap are in `wyd-backend/CLAUDE.md`.
+## Milestones (overview)
+
+The rule is to ship early and harden later. Every milestone ends **deployed, tagged, and demoable**. Full details, including the definition of done, are in `wyd-backend/CLAUDE.md`.
+
+| Milestone | Tag | Demo |
+|---|---|---|
+| M0 Walking skeleton: config, Neon, `/health`, first deploy | v0.0.1 | live `/health` |
+| M1 Accounts: register/login, JWT cookie, profiles | v0.1.0 | live Swagger `/docs` |
+| M2 Social: posts, likes, feed, blocking | v0.2.0 | live Swagger `/docs` |
+| H1 Hardening: tests, mypy, CI, refresh rotation, CSRF, rate limits | v0.3.0 | green CI, security write-up |
+| F1 Frontend foundation (React + Vite + TS) | v0.4.0 | real UI |
+| M3 Realtime DMs over WebSockets | v0.5.0 | two browsers chatting |
+| M4 Group chats + image uploads (R2) | **v1.0.0 MVP** | portfolio launch |
+| M5+ 2FA/OAuth, polish + observability, Redis scaling | — | — |
+
+The frontend (`wyd-frontend/`) starts at **F1**, after the backend auth is hardened and before realtime chat.
+
+Releases: one version for the whole app. When a milestone is done, the user tags `main` (`git tag -a v0.1.0 -m "…"`, then `git push --tags`) and creates a GitHub Release.
