@@ -2,7 +2,6 @@
 name = "wyd-backend"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
 authors = [
     { name = "Vojtaskos58", email = "vojtasvojto@email.cz" }
 ]
