@@ -18,13 +18,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 app = FastAPI(lifespan=lifespan)
 
+# app.add_middleware(
+#     CORSMiddleware, allow_origins=get_settings().CORS_ORIGINS, allow_methods=["GET"]
+# )
+
 
 @app.get("/")
 async def root():
     return {"message": "Hello World!"}
 
 
-@app.get("/health")
+@app.post("/health")
 async def db_health(session: SessionDep):
     await session.execute(select(1))
     return {"message": "DB connection OK"}
