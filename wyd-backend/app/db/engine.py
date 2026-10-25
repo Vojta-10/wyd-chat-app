@@ -1,6 +1,6 @@
 import ssl
-from collections.abc import AsyncIterator
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -10,34 +10,21 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import get_settings
 
-_engine = None
 
-in_dev: bool = get_settings().ENVIRONMENT == "dev"
-
-
-def get_engine() -> AsyncEngine:
-    global _engine
-    if _engine is None:
-        _engine = create_async_engine(
-            get_settings().DATABASE_URL_POOLING.get_secret_value(),
-            echo=in_dev,
-            connect_args={
-                "ssl": ssl.create_default_context(),
-            },
-        )
-    return _engine
-
-
-session_factory = async_sessionmaker(bind=get_engine(), expire_on_commit=False)
-
-
-async def get_db_session() -> AsyncIterator[AsyncSession]:
-    session = session_factory()
+async def initialize() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+    in_dev: bool = get_settings().ENVIRONMENT == "dev"
+    engine = create_async_engine(
+        get_settings().DATABASE_URL_POOLING.get_secret_value(),
+        echo=in_dev,
+        connect_args={
+            "ssl": ssl.create_default_context(),
+        },
+    )
+    session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
     try:
-        yield session
-        await session.commit()
+        async with engine.connect() as conn:
+            await conn.execute(select(1))
     except Exception:
-        await session.rollback()
+        await engine.dispose()
         raise
-    finally:
-        await session.close()
+    return engine, session_factory
