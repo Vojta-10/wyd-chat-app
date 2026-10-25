@@ -2,8 +2,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.db.engine import initialize
 from app.dependencies import SessionDep
 
@@ -18,9 +20,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 app = FastAPI(lifespan=lifespan)
 
-# app.add_middleware(
-#     CORSMiddleware, allow_origins=get_settings().CORS_ORIGINS, allow_methods=["GET"]
-# )
+app.add_middleware(
+    CORSMiddleware, allow_origins=get_settings().CORS_ORIGINS, allow_methods=["GET"]
+)
 
 
 @app.get("/")
@@ -28,7 +30,7 @@ async def root():
     return {"message": "Hello World!"}
 
 
-@app.post("/health")
+@app.get("/health")
 async def db_health(session: SessionDep):
     await session.execute(select(1))
     return {"message": "DB connection OK"}
