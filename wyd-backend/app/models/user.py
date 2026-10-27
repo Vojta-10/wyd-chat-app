@@ -1,16 +1,11 @@
-import os
-import sys
 from datetime import datetime
 from uuid import UUID
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(script_dir))
-
-
-from db.base import Base
 from sqlalchemy import Boolean, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import expression
+
+from app.db.base import Base
 
 
 class User(Base):

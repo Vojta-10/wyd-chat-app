@@ -15,4 +15,4 @@ convention = {
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=convention)
 
-    type_annotation_map = {datetime.datetime: TIMESTAMP(timezone=True)}
+    type_annotation_map = {datetime.datetime: TIMESTAMP(timezone=True)}  # noqa: RUF012
