@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
 from app.core.config import get_settings
+from app.core.exceptions import NotValidHashError, not_valid_hash_error_handler
 from app.db.engine import initialize
 from app.dependencies import SessionDep
 
@@ -23,6 +24,8 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware, allow_origins=get_settings().CORS_ORIGINS, allow_methods=["GET"]
 )
+
+app.add_exception_handler(NotValidHashError, not_valid_hash_error_handler)
 
 
 @app.get("/")
