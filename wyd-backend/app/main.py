@@ -6,9 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
 from app.core.config import get_settings
-from app.core.exceptions import NotValidHashError, not_valid_hash_error_handler
+from app.core.exceptions import (
+    EmailAlreadyRegistered,
+    NotValidHashError,
+    UsernameTaken,
+    email_already_registered_handler,
+    not_valid_hash_error_handler,
+    username_taken_handler,
+)
 from app.db.engine import initialize
 from app.dependencies import SessionDep
+from app.routes.v1.auth_route import auth_router
 
 
 @asynccontextmanager
@@ -26,6 +34,8 @@ app.add_middleware(
 )
 
 app.add_exception_handler(NotValidHashError, not_valid_hash_error_handler)
+app.add_exception_handler(EmailAlreadyRegistered, email_already_registered_handler)
+app.add_exception_handler(UsernameTaken, username_taken_handler)
 
 
 @app.get("/")
@@ -37,3 +47,6 @@ async def root():
 async def db_health(session: SessionDep):
     await session.execute(select(1))
     return {"message": "DB connection OK"}
+
+
+app.include_router(auth_router, prefix="/v1/auth")
