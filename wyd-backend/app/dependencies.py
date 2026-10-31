@@ -19,6 +19,6 @@ async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
         await session.close()
 
 
-SessionDep = Annotated[AsyncSession, Depends(get_db_session)]
+SessionDep = Annotated[AsyncSession, Depends(get_db_session, scope="function")]
 
 GetSettingsDep = Annotated[Settings, Depends(get_settings)]
