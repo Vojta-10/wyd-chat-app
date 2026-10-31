@@ -103,6 +103,7 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 | One Neon role per branch with full privileges (no separate least-privilege app role vs. migration role) | A SQL injection or leaked app credential could run DDL | later (M1+) |
 | SQL echo logging in `dev` prints bound parameters | Harmless now; would log emails and password hashes once users exist | M1 (log redaction) |
 | No automated tests, type checking in CI, dependency audit, or secret scanning | Regressions and leaked secrets are caught only by manual review (`git diff --staged` before every commit) | H1 |
+| Register reveals whether an email is already registered (email enumeration). Mitigated by rate limiting in H1
 
 ## Roadmap
 
