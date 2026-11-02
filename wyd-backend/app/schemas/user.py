@@ -8,10 +8,18 @@ class UserBase(BaseModel):
     username: str = Field(min_length=5, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
 
 
-class UserCreate(UserBase):
+class UserAuthBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    password: SecretStr = Field(min_length=12, max_length=128)
+    password: SecretStr = Field(max_length=128)
     email: EmailStr = Field(max_length=254)
+
+
+class UserCreate(UserBase, UserAuthBase):
+    password: SecretStr = Field(min_length=12, max_length=128)
+
+
+class UserLogin(UserAuthBase):
+    pass
 
 
 class UserResponse(UserBase):

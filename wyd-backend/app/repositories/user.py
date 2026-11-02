@@ -1,4 +1,5 @@
 from pydantic import SecretStr
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -19,3 +20,18 @@ async def create_user(
     session.add(new_user)
     await session.flush()
     return new_user
+
+
+async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
+    result = await session.execute(
+        select(User).where(func.lower(User.email) == func.lower(email))
+    )
+    user = result.scalars().first()
+    return user
+
+
+async def update_user_hash(
+    session: AsyncSession, user: User, new_hashed_password: str
+) -> None:
+    user.hashed_password = new_hashed_password
+    await session.flush()

@@ -2,11 +2,11 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 
-class NotValidHashError(Exception):
+class InvalidCredentials(Exception):
     pass
 
 
-async def not_valid_hash_error_handler(request: Request, exc: Exception):
+async def invalid_credentials_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"detail": "Invalid credentials"},
@@ -35,3 +35,11 @@ async def username_taken_handler(request: Request, exc: Exception):
     )
 
 
+class InactiveAccount(Exception):
+    pass
+
+
+async def inactive_account_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Account is inactive"}
+    )

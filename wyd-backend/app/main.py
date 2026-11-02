@@ -8,10 +8,12 @@ from sqlalchemy import select
 from app.core.config import get_settings
 from app.core.exceptions import (
     EmailAlreadyRegistered,
-    NotValidHashError,
+    InactiveAccount,
+    InvalidCredentials,
     UsernameTaken,
     email_already_registered_handler,
-    not_valid_hash_error_handler,
+    inactive_account_handler,
+    invalid_credentials_handler,
     username_taken_handler,
 )
 from app.db.engine import initialize
@@ -30,12 +32,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
-    CORSMiddleware, allow_origins=get_settings().CORS_ORIGINS, allow_methods=["GET"]
+    CORSMiddleware,
+    allow_origins=get_settings().CORS_ORIGINS,
+    allow_methods=["GET", "POST"],
 )
 
-app.add_exception_handler(NotValidHashError, not_valid_hash_error_handler)
+app.add_exception_handler(InvalidCredentials, invalid_credentials_handler)
 app.add_exception_handler(EmailAlreadyRegistered, email_already_registered_handler)
 app.add_exception_handler(UsernameTaken, username_taken_handler)
+app.add_exception_handler(InactiveAccount, inactive_account_handler)
 
 
 @app.get("/")

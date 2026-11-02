@@ -1,8 +1,6 @@
 from anyio import CapacityLimiter, to_thread
 from argon2 import PasswordHasher
-from argon2.exceptions import InvalidHashError, VerifyMismatchError
-
-from app.core.exceptions import NotValidHashError
+from argon2.exceptions import VerifyMismatchError
 
 ph = PasswordHasher(time_cost=4, memory_cost=9216, parallelism=1)
 limiter = CapacityLimiter(8)
@@ -10,6 +8,10 @@ limiter = CapacityLimiter(8)
 
 async def hash_password(plain_password: str) -> str:
     return await to_thread.run_sync(ph.hash, plain_password, limiter=limiter)
+
+
+def needs_rehash(hash: str) -> bool:
+    return ph.check_needs_rehash(hash)
 
 
 async def verify_password(hashed_password: str, plain_password: str) -> bool:
@@ -21,5 +23,3 @@ async def verify_password(hashed_password: str, plain_password: str) -> bool:
         )
     except VerifyMismatchError:
         return False
-    except InvalidHashError:
-        raise NotValidHashError()
