@@ -96,14 +96,17 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 
 | Gap | Risk today | Planned |
 |---|---|---|
-| No authentication or users yet | Nothing to protect yet | M1 |
-| No rate limiting | `/health` hits the database on every call, so anyone can generate DB load and keep the Neon compute awake (cost) | H1 |
+| Login checks credentials but doesn't issue a session yet (no JWT or cookie) | No protected endpoints exist yet | M1 |
+| No rate limiting | `/health` hits the database on every call (DB load, keeps the Neon compute awake). Register and login allow unlimited attempts (password guessing, email enumeration), and every attempt costs an Argon2 hash | H1 |
 | No security headers (CSP, HSTS, nosniff…), no `TrustedHostMiddleware`, no request body size limit | Low with only two GET endpoints | H1 |
 | `/docs` is public | Intentional: the live docs are the demo until the frontend exists | F1 |
 | One Neon role per branch with full privileges (no separate least-privilege app role vs. migration role) | A SQL injection or leaked app credential could run DDL | later (M1+) |
-| SQL echo logging in `dev` prints bound parameters | Harmless now; would log emails and password hashes once users exist | M1 (log redaction) |
+| SQL echo logging in `dev` prints bound parameters | Users now exist, so the local dev terminal shows emails and Argon2 password hashes (production is not affected: echo is off) | M1 (log redaction) |
 | No automated tests, type checking in CI, dependency audit, or secret scanning | Regressions and leaked secrets are caught only by manual review (`git diff --staged` before every commit) | H1 |
-| Register reveals whether an email is already registered (email enumeration). Mitigated by rate limiting in H1
+| Register reveals whether an email is already registered (`409`), so emails can be enumerated. Login itself is enumeration-safe (same response, equal Argon2 work for unknown emails) | Anyone can check whether an email has an account. Rate limiting (H1) only slows this down | Fix: a generic register response plus an activation email. Needs email sending (not scheduled yet) |
+| No email verification | Someone can register with another person's email before they do (account pre-hijacking) | Together with email sending (not scheduled yet) |
+| Unhandled errors (e.g. a corrupt password hash → `500`) are only visible in the platform logs | Nobody is alerted, so a bug can go unnoticed | M6 (error tracking, structured logs) |
+
 
 ## Roadmap
 
