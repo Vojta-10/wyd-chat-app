@@ -8,7 +8,12 @@ from app.core.exceptions import (
     InvalidCredentials,
     UsernameTaken,
 )
-from app.core.security import hash_password, needs_rehash, verify_password
+from app.core.security import (
+    create_access_token,
+    hash_password,
+    needs_rehash,
+    verify_password,
+)
 from app.models.user import User
 from app.repositories.user import create_user, get_user_by_email, update_user_hash
 from app.schemas.user import UserCreate, UserLogin
@@ -38,7 +43,12 @@ async def register_account(session: AsyncSession, payload: UserCreate) -> User:
 
 
 # TODO: Tests
-async def login_account(session: AsyncSession, payload: UserLogin) -> User:
+async def login_account(
+    session: AsyncSession,
+    payload: UserLogin,
+    jwt_token_lifetime: int,
+    jwt_secret: SecretStr,
+) -> tuple[User, str]:
     user = await get_user_by_email(session, payload.email)
 
     if user is None:
@@ -57,5 +67,6 @@ async def login_account(session: AsyncSession, payload: UserLogin) -> User:
         new_hash: str = await hash_password(payload.password.get_secret_value())
         await update_user_hash(session, user, new_hash)
 
-    return user
-    # Create JWT
+    token = create_access_token(str(user.id), jwt_token_lifetime, jwt_secret)
+
+    return user, token
