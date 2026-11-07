@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Response, status
 
 from app.core.constants import ACCESS_COOKIE_NAME
-from app.dependencies import GetCurrentUserDep, GetSettingsDep, SessionDep
+from app.dependencies import GetSettingsDep, SessionDep
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth import login_account, register_account
 
@@ -37,4 +37,3 @@ async def login(
         * 60,  # max_age parameter in seconds, our env in minutes therefore * 60 to get seconds
     )
     return user
-

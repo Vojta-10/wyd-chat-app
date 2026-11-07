@@ -21,6 +21,7 @@ from app.core.exceptions import (
 from app.db.engine import initialize
 from app.dependencies import SessionDep
 from app.routes.v1.auth_route import auth_router
+from app.routes.v1.users_route import users_router
 
 
 @asynccontextmanager
@@ -58,3 +59,4 @@ async def db_health(session: SessionDep):
 
 
 app.include_router(auth_router, prefix="/v1/auth")
+app.include_router(users_router, prefix="/v1/users")
