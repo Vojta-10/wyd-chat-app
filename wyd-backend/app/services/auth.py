@@ -6,16 +6,23 @@ from app.core.exceptions import (
     EmailAlreadyRegistered,
     InactiveAccount,
     InvalidCredentials,
+    InvalidToken,
     UsernameTaken,
 )
 from app.core.security import (
     create_access_token,
+    decode_access_token,
     hash_password,
     needs_rehash,
     verify_password,
 )
 from app.models.user import User
-from app.repositories.user import create_user, get_user_by_email, update_user_hash
+from app.repositories.user import (
+    create_user,
+    get_user_by_email,
+    get_user_by_id,
+    update_user_hash,
+)
 from app.schemas.user import UserCreate, UserLogin
 
 
@@ -70,3 +77,17 @@ async def login_account(
     token = create_access_token(str(user.id), jwt_token_lifetime, jwt_secret)
 
     return user, token
+
+
+async def get_user_from_access_token(
+    session: AsyncSession, token: str, jwt_secret: SecretStr
+) -> User:
+    user_id = decode_access_token(token=token, jwt_secret=jwt_secret)
+    user = await get_user_by_id(session, user_id)
+    if user is None:
+        raise InvalidToken()
+
+    if not user.is_active:
+        raise InactiveAccount()
+
+    return user

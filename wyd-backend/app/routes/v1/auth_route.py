@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Response, status
 
-from app.dependencies import GetSettingsDep, SessionDep
+from app.core.constants import ACCESS_COOKIE_NAME
+from app.dependencies import GetCurrentUserDep, GetSettingsDep, SessionDep
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth import login_account, register_account
 
@@ -27,7 +28,7 @@ async def login(
         session, payload, settings.JWT_ACCESS_TOKEN_LIFETIME, settings.JWT_SECRET
     )
     response.set_cookie(
-        key="__Host-bearer-token",
+        key=ACCESS_COOKIE_NAME,
         value=token,
         httponly=True,
         secure=True,
@@ -36,3 +37,4 @@ async def login(
         * 60,  # max_age parameter in seconds, our env in minutes therefore * 60 to get seconds
     )
     return user
+

@@ -26,7 +26,7 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     result = await session.execute(
         select(User).where(func.lower(User.email) == func.lower(email))
     )
-    user = result.scalars().first()
+    user = result.scalar_one_or_none()
     return user
 
 
@@ -35,3 +35,8 @@ async def update_user_hash(
 ) -> None:
     user.hashed_password = new_hashed_password
     await session.flush()
+
+
+async def get_user_by_id(session: AsyncSession, user_id: str) -> User | None:
+    result = await session.execute(select(User).where(User.id == user_id))
+    return result.scalar_one_or_none()
