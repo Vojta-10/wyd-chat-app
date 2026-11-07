@@ -43,3 +43,14 @@ async def inactive_account_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Account is inactive"}
     )
+
+
+class InvalidToken(Exception):
+    pass
+
+
+async def invalid_token_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": "Invalid token"},
+    )
