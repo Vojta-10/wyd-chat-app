@@ -2,11 +2,11 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 
-class NotValidHashError(Exception):
+class InvalidCredentials(Exception):
     pass
 
 
-async def not_valid_hash_error_handler(request: Request, exc: Exception):
+async def invalid_credentials_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"detail": "Invalid credentials"},
@@ -35,3 +35,35 @@ async def username_taken_handler(request: Request, exc: Exception):
     )
 
 
+class InactiveAccount(Exception):
+    pass
+
+
+async def inactive_account_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Account is inactive"}
+    )
+
+
+class InvalidToken(Exception):
+    pass
+
+
+async def invalid_token_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": "Invalid token"},
+    )
+
+
+class DisallowedUpdateField(Exception):
+    """A field outside the repository's update allowlist reached the DB layer.
+
+    This is a bug in our code (the schema should have rejected it), not a client
+    error, so it intentionally has NO exception handler and surfaces as a 500.
+    """
+
+    def __init__(self, field: str) -> None:
+        # Only the field *name* goes into the message, never the value (may be PII).
+        super().__init__(f"Field not allowed in user update: {field!r}")
+        self.field = field

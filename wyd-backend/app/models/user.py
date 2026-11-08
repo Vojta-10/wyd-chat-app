@@ -22,6 +22,8 @@ class User(Base):
         onupdate=func.now(),
     )
 
+    __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012
+
     __table_args__ = (
         Index(None, func.lower(email), unique=True),
         Index(None, func.lower(username), unique=True),
