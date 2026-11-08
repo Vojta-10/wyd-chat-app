@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Response, status
 
-from app.core.constants import ACCESS_COOKIE_NAME
+from app.core.constants import ACCESS_COOKIE_NAME, AUTH_COOKIE_OPTIONS
 from app.dependencies import GetSettingsDep, SessionDep
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth import login_account, register_account
@@ -30,10 +30,14 @@ async def login(
     response.set_cookie(
         key=ACCESS_COOKIE_NAME,
         value=token,
-        httponly=True,
-        secure=True,
-        samesite="strict",
         max_age=settings.JWT_ACCESS_TOKEN_LIFETIME
         * 60,  # max_age parameter in seconds, our env in minutes therefore * 60 to get seconds
+        **AUTH_COOKIE_OPTIONS,
     )
     return user
+
+
+@auth_router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(response: Response):
+    response.delete_cookie(key=ACCESS_COOKIE_NAME, **AUTH_COOKIE_OPTIONS)
+    return {"detail": "Successfully logged out"}

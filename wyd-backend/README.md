@@ -96,7 +96,7 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 
 | Gap | Risk today | Planned |
 |---|---|---|
-| Login checks credentials but doesn't issue a session yet (no JWT or cookie) | No protected endpoints exist yet | M1 |
+| Logout only deletes the cookie. The access JWT is stateless and stays valid until `exp` (`JWT_ACCESS_TOKEN_LIFETIME`, 10–60 min) | A token copied before logout (e.g. from a shared or compromised device) still works: the holder can read and change the account until it expires, and the server can't tell | H1: short-lived access token (5–15 min) + rotating, revocable refresh token |
 | No rate limiting | `/health` hits the database on every call (DB load, keeps the Neon compute awake). Register and login allow unlimited attempts (password guessing, email enumeration), and every attempt costs an Argon2 hash | H1 |
 | No security headers (CSP, HSTS, nosniff…), no `TrustedHostMiddleware`, no request body size limit | Low with only two GET endpoints | H1 |
 | `/docs` is public | Intentional: the live docs are the demo until the frontend exists | F1 |
