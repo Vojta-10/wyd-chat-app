@@ -54,3 +54,16 @@ async def invalid_token_handler(request: Request, exc: Exception):
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"detail": "Invalid token"},
     )
+
+
+class DisallowedUpdateField(Exception):
+    """A field outside the repository's update allowlist reached the DB layer.
+
+    This is a bug in our code (the schema should have rejected it), not a client
+    error, so it intentionally has NO exception handler and surfaces as a 500.
+    """
+
+    def __init__(self, field: str) -> None:
+        # Only the field *name* goes into the message, never the value (may be PII).
+        super().__init__(f"Field not allowed in user update: {field!r}")
+        self.field = field
