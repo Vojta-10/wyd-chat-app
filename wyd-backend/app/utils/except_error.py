@@ -1,6 +1,8 @@
 from app.core.exceptions import EmailAlreadyRegistered, UsernameTaken
 
 
+# TODO(test): an IntegrityError from any other constraint is re-raised
+#   unchanged (not mapped to a 409, not swallowed)
 def extract_db_error_index_constraint_and_raise_error(e):
     dbapi_error = e.orig
     asyncpg_error = getattr(dbapi_error, "__cause__", None)

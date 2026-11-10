@@ -23,7 +23,13 @@ from app.repositories.user import (
 from app.schemas.user import UserCreate, UserLogin
 
 
-# TODO: Tests
+# TODO(test): register
+#   - happy path: 201, body is only id + username (no email, no hash)
+#   - email taken, different case (Bob@x.io vs bob@x.io) -> 409
+#   - username taken, different case (Bob vs bob) -> 409
+#   - race: two concurrent registers, same username -> one 201, one 409 (no 500)
+#   - validation: password 11 or 129 chars -> 422; bad username chars -> 422
+#   - mass assignment: extra field (is_active, id) -> 422
 async def register_account(session: AsyncSession, payload: UserCreate) -> User:
     hashed_password: str = await hash_password(payload.password.get_secret_value())
     return await create_user(
@@ -34,7 +40,13 @@ async def register_account(session: AsyncSession, payload: UserCreate) -> User:
     )
 
 
-# TODO: Tests
+# TODO(test): login
+#   - happy path: 200 + cookie with Secure, HttpOnly, SameSite=Strict, Path=/
+#   - email lookup is case-insensitive (register bob@x.io, log in as BOB@x.io)
+#   - enumeration: unknown email and wrong password -> identical 401 body
+#   - enumeration timing: unknown-email path still runs a hash
+#   - inactive + correct password -> 403; inactive + wrong password -> 401
+#   - rehash: a hash made with old Argon2 params is upgraded after login
 async def login_account(
     session: AsyncSession,
     payload: UserLogin,
@@ -64,6 +76,13 @@ async def login_account(
     return user, token
 
 
+# TODO(test): access token -> user (security regression, all expect 401)
+#   - no cookie / expired / bad signature / wrong iss / wrong aud
+#   - missing a required claim (exp, iss, sub, iat, jti)
+#   - alg confusion: token signed with "none" or another algorithm
+#   - valid token for a user that no longer exists
+#   - valid signature but sub is not a valid UUID
+#   - and: valid token for an inactive user -> 403
 async def get_user_from_access_token(
     session: AsyncSession, token: str, jwt_secret: SecretStr
 ) -> User:

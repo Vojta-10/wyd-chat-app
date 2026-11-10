@@ -32,6 +32,8 @@ async def create_user(
     return new_user
 
 
+# TODO(test): a key outside the allowlist (e.g. "is_active") raises
+#   DisallowedUpdateField and nothing is written to the DB
 async def update_user(
     session: AsyncSession, user: User, payload: dict[str, Any]
 ) -> None:

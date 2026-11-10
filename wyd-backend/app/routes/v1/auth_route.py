@@ -37,6 +37,9 @@ async def login(
     return user
 
 
+# TODO(test): logout
+#   - Set-Cookie clears the cookie: same name, Max-Age=0, Path=/, Secure
+#   - after logout, a request without the cookie to /users/me -> 401
 @auth_router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(response: Response):
     response.delete_cookie(key=ACCESS_COOKIE_NAME, **AUTH_COOKIE_OPTIONS)

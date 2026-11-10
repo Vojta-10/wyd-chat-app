@@ -7,11 +7,11 @@ from argon2.exceptions import VerifyMismatchError
 from jwt import InvalidTokenError, decode, encode
 from pydantic import SecretStr
 
+from app.core.constants import ACCESS_TOKEN_AUDIENCE, ISSUER
 from app.core.exceptions import InvalidToken
 
 ph = PasswordHasher(time_cost=4, memory_cost=9216, parallelism=1)
 limiter = CapacityLimiter(8)
-from app.core.constants import ACCESS_TOKEN_AUDIENCE, ISSUER
 
 JWT_ENCODING_ALGORITHM = "HS256"
 
