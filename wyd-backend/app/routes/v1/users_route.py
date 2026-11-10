@@ -1,8 +1,10 @@
+from typing import Annotated
+
 from fastapi import APIRouter, status
 
 from app.dependencies import GetCurrentUserDep, SessionDep
-from app.schemas.user import UserPatch, UserSelf
-from app.services.users import update_user_fields
+from app.schemas.user import UserPatch, UserPublic, UserSelf, username_constraint
+from app.services.users import get_public_profile, update_user_fields
 
 users_router = APIRouter(tags=["users"])
 
@@ -13,6 +15,21 @@ users_router = APIRouter(tags=["users"])
 @users_router.get("/me", response_model=UserSelf)
 async def get_me(current_user: GetCurrentUserDep):
     return current_user
+
+
+# TODO(test): GET /{username}
+#   - happy path: body is exactly {id, username, created_at} (no email, is_active)
+#   - case-insensitive: GET /users/BOB finds "bob"
+#   - unknown username -> 404
+#   - inactive user -> 404 with a body identical to the unknown case
+#   - GET /users/me still hits the /me route, not this one
+@users_router.get(
+    "/{username}", status_code=status.HTTP_200_OK, response_model=UserPublic
+)
+async def get_user_by_username(
+    session: SessionDep, username: Annotated[str, username_constraint]
+):
+    return await get_public_profile(session, username)
 
 
 # TODO(test): PATCH /me

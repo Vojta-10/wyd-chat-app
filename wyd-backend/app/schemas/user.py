@@ -25,9 +25,10 @@ class UserLogin(UserAuthBase):
     pass
 
 
-class UserResponse(UserBase):
+class UserPublic(UserBase):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
+    created_at: datetime
 
 
 class UserSelf(UserBase):
