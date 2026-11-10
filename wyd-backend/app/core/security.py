@@ -7,11 +7,11 @@ from argon2.exceptions import VerifyMismatchError
 from jwt import InvalidTokenError, decode, encode
 from pydantic import SecretStr
 
+from app.core.constants import ACCESS_TOKEN_AUDIENCE, ISSUER
 from app.core.exceptions import InvalidToken
 
 ph = PasswordHasher(time_cost=4, memory_cost=9216, parallelism=1)
 limiter = CapacityLimiter(8)
-from app.core.constants import ACCESS_TOKEN_AUDIENCE, ISSUER
 
 JWT_ENCODING_ALGORITHM = "HS256"
 
@@ -57,7 +57,7 @@ def create_access_token(
     return jwt_token
 
 
-def decode_access_token(token: str, jwt_secret: SecretStr) -> str:
+def decode_access_token(token: str, jwt_secret: SecretStr) -> uuid.UUID:
     try:
         payload = decode(
             jwt=token,
@@ -69,6 +69,7 @@ def decode_access_token(token: str, jwt_secret: SecretStr) -> str:
             audience=ACCESS_TOKEN_AUDIENCE,
             algorithms=[JWT_ENCODING_ALGORITHM],
         )
-        return payload["sub"]
-    except InvalidTokenError:
-        raise InvalidToken()
+        user_id: uuid.UUID = uuid.UUID(payload["sub"])
+        return user_id
+    except (InvalidTokenError, ValueError) as e:
+        raise InvalidToken() from e

@@ -67,3 +67,13 @@ class DisallowedUpdateField(Exception):
         # Only the field *name* goes into the message, never the value (may be PII).
         super().__init__(f"Field not allowed in user update: {field!r}")
         self.field = field
+
+
+class UserNotFound(Exception):
+    pass
+
+
+async def user_not_found_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": "User not found"}
+    )

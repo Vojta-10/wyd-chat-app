@@ -12,10 +12,12 @@ from app.core.exceptions import (
     InvalidCredentials,
     InvalidToken,
     UsernameTaken,
+    UserNotFound,
     email_already_registered_handler,
     inactive_account_handler,
     invalid_credentials_handler,
     invalid_token_handler,
+    user_not_found_handler,
     username_taken_handler,
 )
 from app.db.engine import initialize
@@ -45,6 +47,7 @@ app.add_exception_handler(EmailAlreadyRegistered, email_already_registered_handl
 app.add_exception_handler(UsernameTaken, username_taken_handler)
 app.add_exception_handler(InactiveAccount, inactive_account_handler)
 app.add_exception_handler(InvalidToken, invalid_token_handler)
+app.add_exception_handler(UserNotFound, user_not_found_handler)
 
 
 @app.get("/")

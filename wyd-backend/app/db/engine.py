@@ -15,6 +15,9 @@ async def initialize() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
     in_dev: bool = get_settings().ENVIRONMENT == "dev"
     engine = create_async_engine(
         get_settings().DATABASE_URL_POOLING.get_secret_value(),
+        # TODO(security): echo logs bound parameters, so emails and Argon2 hashes
+        #   show up in the dev terminal. README gap scheduled for M1: fix or
+        #   reschedule before tagging v0.1.0.
         echo=in_dev,
         connect_args={
             "ssl": ssl.create_default_context(),
