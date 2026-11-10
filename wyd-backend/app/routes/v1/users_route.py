@@ -23,6 +23,8 @@ async def get_me(current_user: GetCurrentUserDep):
 #   - unknown username -> 404
 #   - inactive user -> 404 with a body identical to the unknown case
 #   - GET /users/me still hits the /me route, not this one
+#   - validation: 4 or 65 chars, or a space -> 422 before any DB query
+#   - M2: blocked users (either direction) -> 404
 @users_router.get(
     "/{username}", status_code=status.HTTP_200_OK, response_model=UserPublic
 )

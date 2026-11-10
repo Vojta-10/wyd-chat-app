@@ -4,6 +4,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 
+# TODO(M2): reserved usernames, checked case-insensitively on register and PATCH.
+#   Route words that would shadow /users/{username} (search, settings, blocked...)
+#   plus impersonation names (admin, support, wyd...). Decide before M2 adds the
+#   first /users/<word> route.
 username_constraint = Field(min_length=5, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
 
 
