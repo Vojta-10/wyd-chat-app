@@ -1,11 +1,15 @@
 from datetime import datetime
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from sqlalchemy import Boolean, Index, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import expression
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user_profile import UserProfile
 
 
 class User(Base):
@@ -22,6 +26,9 @@ class User(Base):
         onupdate=func.now(),
     )
 
+    user_profile: Mapped[Optional["UserProfile"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
     __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012
 
     __table_args__ = (
