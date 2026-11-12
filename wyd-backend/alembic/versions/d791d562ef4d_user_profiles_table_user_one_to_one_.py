@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("display_name", sa.VARCHAR(length=64), nullable=False),
         sa.Column("bio", sa.VARCHAR(length=128), server_default="", nullable=False),
-        sa.Column("pronouns", sa.VARCHAR(length=16), nullable=True),
+        sa.Column("pronouns", sa.VARCHAR(length=16), server_default="", nullable=False),
         sa.Column("theme", sa.VARCHAR(), server_default="system", nullable=False),
         sa.Column("accent_color", sa.VARCHAR(), nullable=True),
         sa.CheckConstraint(
