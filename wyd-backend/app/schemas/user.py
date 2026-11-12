@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
@@ -49,7 +49,7 @@ class UserPatch(BaseModel):
 
     @field_validator("username", mode="before")
     @classmethod
-    def reject_explicit_null(cls, v):
+    def reject_explicit_null(cls, v: Any) -> Any:
         if v is None:
             raise ValueError("Username must not be null")
         return v
