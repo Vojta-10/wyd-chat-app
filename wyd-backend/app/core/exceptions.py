@@ -69,6 +69,16 @@ class DisallowedUpdateField(Exception):
         self.field = field
 
 
+class UserProfileInsertError(Exception):
+    """A user's profile row is still missing after the self-heal insert and re-read.
+
+    The AFTER INSERT trigger on `users` should guarantee every user has a profile,
+    and self-heal covers the rare case where it doesn't. Reaching this means even
+    that failed, so it's an invariant violation on our side, not a client error.
+    It intentionally has NO exception handler and surfaces as a 500.
+    """
+
+
 class UserNotFound(Exception):
     pass
 
