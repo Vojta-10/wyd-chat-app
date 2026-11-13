@@ -47,12 +47,17 @@ type Pronouns = Annotated[
 ]
 
 
-class UserProfileSelf(BaseModel):
+class UserProfilePublicBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     display_name: str
     bio: str
-    theme: AllowedThemes
     accent_color: str | None
     pronouns: str
+
+
+class UserProfileSelfBase(UserProfilePublicBase):
+    theme: AllowedThemes
 
 
 class UserProfilePatch(BaseModel):

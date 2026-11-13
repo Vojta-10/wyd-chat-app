@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 
+from app.schemas.user_profile import UserProfilePublicBase, UserProfileSelfBase
+
 # TODO(M2): reserved usernames, checked case-insensitively on register and PATCH.
 #   Route words that would shadow /users/{username} (search, settings, blocked...)
 #   plus impersonation names (admin, support, wyd...). Decide before M2 adds the
@@ -29,18 +31,29 @@ class UserLogin(UserAuthBase):
     pass
 
 
-class UserPublic(UserBase):
+class UserSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
+    username: str
     created_at: datetime
 
 
-class UserSelf(UserBase):
+class UserPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    created_at: datetime
+    username: str
+    user_profile: UserProfilePublicBase | None
+
+
+class UserSelf(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     email: EmailStr
     created_at: datetime
     updated_at: datetime
+    username: str
+    user_profile: UserProfileSelfBase | None
 
 
 class UserPatch(BaseModel):
