@@ -27,7 +27,10 @@ class User(Base):
     )
 
     user_profile: Mapped[Optional["UserProfile"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="raise",
     )
     __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012
 
