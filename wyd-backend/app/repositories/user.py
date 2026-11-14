@@ -5,6 +5,7 @@ from pydantic import SecretStr
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.core.exceptions import DisallowedUpdateField
 from app.models.user import User
@@ -50,7 +51,9 @@ async def update_user(
 
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     result = await session.execute(
-        select(User).where(func.lower(User.email) == func.lower(email))
+        select(User)
+        .where(func.lower(User.email) == func.lower(email))
+        .options(joinedload(User.user_profile))
     )
     user = result.scalar_one_or_none()
     return user
@@ -64,12 +67,16 @@ async def update_user_hash(
 
 
 async def get_user_by_id(session: AsyncSession, user_id: UUID) -> User | None:
-    result = await session.execute(select(User).where(User.id == user_id))
+    result = await session.execute(
+        select(User).where(User.id == user_id).options(joinedload(User.user_profile))
+    )
     return result.scalar_one_or_none()
 
 
 async def get_user_by_username(session: AsyncSession, username: str) -> User | None:
     result = await session.execute(
-        select(User).where(func.lower(User.username) == func.lower(username))
+        select(User)
+        .where(func.lower(User.username) == func.lower(username))
+        .options(joinedload(User.user_profile))
     )
     return result.scalar_one_or_none()

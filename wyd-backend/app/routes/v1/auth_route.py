@@ -2,7 +2,7 @@ from fastapi import APIRouter, Response, status
 
 from app.core.constants import ACCESS_COOKIE_NAME, AUTH_COOKIE_OPTIONS
 from app.dependencies import GetSettingsDep, SessionDep
-from app.schemas.user import UserCreate, UserLogin, UserPublic
+from app.schemas.user import UserCreate, UserLogin, UserPublic, UserSummary
 from app.services.auth import login_account, register_account
 
 auth_router = APIRouter(tags=["auth"])
@@ -11,7 +11,7 @@ auth_router = APIRouter(tags=["auth"])
 @auth_router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
-    response_model=UserPublic,
+    response_model=UserSummary,
 )
 async def register(session: SessionDep, payload: UserCreate):
     return await register_account(session, payload)
