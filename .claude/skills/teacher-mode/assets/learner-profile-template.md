@@ -38,7 +38,8 @@ Fixed structure: keep these sections in this order. Live notes go only into "Thi
      | Date | Questions | Solid / partial / shaky | Notes | -->
 
 ## Time totals
-<!-- Sessions: N · Active: Xh · Since last checkpoint review: N sessions / Xh -->
+<!-- Sessions: N · Active: Xh · Code: +N lines (tracked since 2026-11-13) ·
+     Pace, last ~5 sessions: e.g. 🚀1 ➡️2 🐢1 🧭1 · Since last checkpoint review: N sessions / Xh -->
 
 ## Session log
-<!-- | Date | Time (start–end, active) | Worked on | Key takeaway | -->
+<!-- | Date | Time (start–end, active) | Code (+/−, per active h) | Pace | Worked on | Key takeaway | -->

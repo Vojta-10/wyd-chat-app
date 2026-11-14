@@ -111,6 +111,7 @@ What's worth a scratch note:
 - **Decisions:** design choices the user made and *their* justification.
 - **Pattern sightings:** a recurring habit showing up again, or noticeably *not* showing up (section 7).
 - **Question ideas:** a good checkpoint question the moment suggested (section 8).
+- **Pace signals:** with clock times. A stall (20+ min on one problem, especially an incidental one), or a flying stretch (several answers at rung 1 or 2 in a row, or a quick write → review → commit). These are the evidence for the session's pace label (section 6a).
 
 Tell the user briefly when you note something significant ("Noted that async sessions are worth revisiting"). The notes should never feel like secret surveillance. The user can read and edit the file whenever they like.
 
@@ -118,7 +119,10 @@ Tell the user briefly when you note something significant ("Noted that async ses
 
 When the user says the session is over ("that's it for today", "end of session", "done for now"), run this routine before saying goodbye:
 
-1. **Measure the session.** Run `python3 .claude/skills/teacher-mode/scripts/session_time.py` from the repo root. It reads this session's transcript timestamps and prints start–end, wall-clock time, active time (gaps under 45 min) and breaks. Active time is an estimate, since long coding stretches without messages count as breaks.
+1. **Measure the session.** From the repo root, run:
+   - `python3 .claude/skills/teacher-mode/scripts/session_time.py`: start–end, wall-clock time, active time (gaps under 45 min) and breaks. Active time is an estimate, because long coding stretches without messages count as breaks.
+   - `python3 .claude/skills/teacher-mode/scripts/session_loc.py`: this session's commits plus uncommitted work, as lines of code, comment lines and deleted lines, and code lines per active hour. Only source files count, and comment-only lines (including Claude's `TODO(test)` blocks) are excluded from "code". If Claude wrote code lines this session at the user's request (section 2's escape hatch), subtract them roughly and say so, e.g. `+129 code (~10 by Claude)`.
+   Then pick the **pace label** (section 6a).
 2. **Distribute the scratch notes** into the fixed sections:
    - struggles → **Struggles** (update an existing entry: bump ×N, add the date and the new nuance; don't duplicate),
    - misconceptions → **Misconceptions corrected**,
@@ -126,12 +130,24 @@ When the user says the session is over ("that's it for today", "end of session",
    - habits → **Recurring patterns** (section 7),
    - questions → the question bank (section 8),
    - things to quiz later → **Revisit queue**.
-3. **Write one Session log row:** date, time (`start–end, active Xh YYm`), what was worked on, and one key takeaway.
-4. **Update Time totals** (sessions, active hours) and the **Checkpoint reviews** status (is one due now?).
+3. **Write one Session log row:** date, time (`start–end, active Xh YYm`), code (`+N / −M, ~X/h`), pace (label plus a few words on why), what was worked on, and one key takeaway.
+4. **Update Time totals** (sessions, active hours, total code lines, and the pace mix over the last ~5 sessions) and the **Checkpoint reviews** status (is one due now?).
 5. **Rewrite ▶ Resume here** from scratch: branch, last commit, the very next step, open questions, leftovers, standing permissions.
 6. **Empty the scratch section.**
 7. **Prune** if the file is over ~400 lines: merge old session-log rows into monthly summaries, drop revisit items that became solid, compress solid entries. Keep entries short and specific, always with absolute dates (YYYY-MM-DD). "2026-10-24: confused `Depends` per-request caching with global caching" is useful. "struggles with FastAPI" is not.
-8. Tell the user in 3–5 lines: session length, the takeaway, what's next, and whether a checkpoint review is due.
+8. Tell the user in 3–5 lines: session length, lines of code and pace, the takeaway, what's next, and whether a checkpoint review is due.
+
+### 6a. Pace: how the session flowed
+
+Each session gets one pace label. It describes how the session *went*, not how good it was:
+- 🚀 **flying:** most answers at rung 1 or 2, few stalls, work moved from writing to review to commit quickly.
+- ➡️ **steady:** a normal mix of quick wins and a few climbs up the ladder.
+- 🐢 **slow:** long stalls (20+ min on one problem), several rung-4/5 moments, or mostly debugging.
+- 🧭 **design-heavy:** mostly decisions and discussion, so little code is the *expected* outcome. Don't call this slow.
+
+A session can change pace partway through. Use the dominant label and mention the switch ("🚀 → 🐢 after 18:30").
+
+Base the label on the scratch notes' pace signals, and use code per active hour only as supporting evidence. Lines of code are a weak measure for learning: a session of 40 careful lines with good decisions can be the best session of the month. Never present the numbers as a score or compare sessions in a judging way. Do look for patterns that help the user, for example "slow sessions are usually the ones that start with a new library, so read the docs first", or "you fly on design questions and stall on ORM loading". Add those to **Learning style**. Numbers from before 2026-11-13 aren't reliable per session, because older work was committed in large squashed commits.
 
 ## 7. Recurring patterns: gently
 
