@@ -8,9 +8,9 @@ This is a learning and portfolio project, built milestone by milestone with a st
 
 > The database (Neon) scales to zero when idle, so the first request after a quiet period can take about a second longer.
 
-## Status: M1, accounts (in progress → `v0.1.0`)
+## Status: M1, accounts ✅ (`v0.1.0`)
 
-Accounts with Argon2id password hashing, a JWT access token in an httpOnly cookie, and customizable profiles. Previous release: `v0.0.1` (M0, walking skeleton).
+Accounts with Argon2id password hashing, a JWT access token in an httpOnly cookie, and customizable profiles, deployed on Railway. Previous release: `v0.0.1` (M0, walking skeleton). Next: M2, social (posts, likes, feed, blocking).
 
 | Endpoint | Auth | What it does |
 |---|---|---|
@@ -145,7 +145,7 @@ Do not put `?sslmode=...` in the URLs: asyncpg doesn't understand libpq query pa
 - **Build, release, run are separate stages** ([12-factor](https://12factor.net/build-release-run)). The build only installs dependencies and has no side effects. Migrations run in Railway's **pre-deploy command**, which starts only after a successful build. If the migration fails, the deploy stops and the previous version keeps serving. A failed deploy does not roll back the database.
 - **Zero-downtime switchover.** Railway sends traffic to the new version only after `/health` returns `200`, and `/health` checks the database. Until then the old version keeps serving, *after* the migration has already run, so every migration must stay compatible with the code that's currently live (expand/contract).
 - **Trusting the proxy's forwarded headers.** Railway terminates HTTPS at its edge and forwards the request to the app over plain HTTP, adding `X-Forwarded-Proto: https` and `X-Forwarded-For: <client IP>`. By default uvicorn only believes these headers from `127.0.0.1`, so the app thought every request was HTTP. Redirects (e.g. the trailing-slash `307`) pointed to `http://…`, and a `307` makes the client resend the same body, so a login sent to `/v1/auth/login/` would have resent the password in plain text. `--forwarded-allow-ips="*"` fixes this. Trusting every sender is only acceptable because the container has no public address: the only way in from the internet is through Railway's edge (Railway doesn't publish its proxy IPs, so they can't be listed explicitly).
-  - **Open question for H1:** with `*`, uvicorn takes the client IP from the *leftmost* `X-Forwarded-For` entry. If Railway's edge appends to a client-supplied header instead of replacing it, clients can fake their IP. Nothing relies on the client IP yet, but per-IP rate limiting will, so verify this (send a fake `X-Forwarded-For`, check what the app sees) before H1 builds on it.
+  - **Side effect, verified 2026-11-14:** with `*`, uvicorn takes the client IP from the *leftmost* `X-Forwarded-For` entry, and a `curl` request with a fake `X-Forwarded-For` header reached the app with the fake IP. So the client IP the app sees is **client-controlled**. Nothing relies on it yet (see Known security gaps).
 - **Port:** Railway injects `PORT` and the FastAPI CLI reads it (`--port` defaults to the `PORT` env var). `PORT=8080` is also set explicitly, so the app and Railway's healthcheck agree on the port.
 - **Single replica, single worker**, on purpose: later milestones keep WebSocket connections and rate-limit counters in process memory. Scaling out with Redis is a planned lesson (M7).
 - Settings are configured in the Railway dashboard, not with a `railway.toml` file: Railway deprecated config-as-code (it stops being read on 2026-12-01) in favour of a TypeScript-based infrastructure-as-code setup, which is more than this single service needs.
@@ -160,11 +160,12 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 | Logout only deletes the cookie. The access JWT is stateless and stays valid until `exp` (`JWT_ACCESS_TOKEN_LIFETIME`, 10–60 min) | A token copied before logout (e.g. from a shared or compromised device) still works: the holder can read and change the account until it expires, and the server can't tell | H1: short-lived access token (5–15 min) + rotating, revocable refresh token |
 | No CSRF token | State-changing requests rely on the cookie's `SameSite=Strict`, which stops cross-site requests in modern browsers but not attacks from a same-site origin | H1: signed double-submit token + required custom header |
 | No rate limiting | Register and login allow unlimited attempts (password guessing, email enumeration), and every attempt costs an Argon2 hash. Public profiles can be scraped. `/health` hits the database on every call | H1 |
-| Public profiles are readable without logging in | Anyone can check whether a username exists and see its join date (usernames are public by design) | M2: blocking + privacy setting; H1: rate limiting |
+| Public profiles are readable without logging in | Anyone can check whether a username exists and see its join date and public profile fields (usernames are public by design) | M2: blocking + privacy setting; H1: rate limiting |
 | No reserved usernames | Anyone can register names like `admin` or `support` (impersonation). A future `/users/<word>` route would collide with a user of that name | Before M2 adds new `/users/...` routes |
 | No security headers (CSP, HSTS, nosniff…), no `TrustedHostMiddleware`, no request body size limit | Low: the API serves only JSON, no HTML pages. Oversized bodies are parsed before field limits reject them | H1 |
 | `/docs` is public | Intentional: the live docs are the demo until the frontend exists | F1 |
 | One Neon role per branch with full privileges (no separate least-privilege app role vs. migration role) | A SQL injection or leaked app credential could run DDL | later |
+| The client IP is spoofable: behind Railway the app trusts `X-Forwarded-For` from everyone (`--forwarded-allow-ips="*"`) and uses its leftmost entry, which the client controls | None today: no logic uses the client IP, only the access logs record whatever IP a client claims. Per-IP rate limiting built on it would be trivially bypassed (a new fake IP per request) | H1, before per-IP rate limiting: take the IP from an entry or header the client can't control |
 | CORS settings don't reject a wildcard origin (`CORS_ORIGINS=["*"]`) | None today (credentials aren't allowed). Once F1 enables `allow_credentials`, Starlette answers a wildcard by reflecting *any* origin, so a config mistake would let every website read logged-in responses | F1: reject `*` at startup (fail closed) |
 | Unhandled errors return plain-text `Internal Server Error` instead of the JSON `{"detail": …}` shape | No leak (no stack traces), but clients must handle two error formats | H1 / M6 |
 | No automated tests, type checking in CI, dependency audit, or secret scanning | Regressions and leaked secrets are caught only by manual review (`git diff --staged` before every commit). Test cases are tracked as `TODO(test)` comments | H1 |
@@ -177,7 +178,7 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 | Milestone | Tag | Demo |
 |---|---|---|
 | **M0 Walking skeleton** ✅ | v0.0.1 | live `/health` |
-| **M1 Accounts** (in progress) | v0.1.0 | live Swagger `/docs` |
+| **M1 Accounts** ✅ | v0.1.0 | live Swagger `/docs` |
 | M2 Social: posts, likes, feed, blocking | v0.2.0 | live Swagger `/docs` |
 | H1 Hardening: tests, CI, refresh rotation, CSRF, rate limits | v0.3.0 | green CI, security write-up |
 | F1 Frontend (React + Vite + TS) | v0.4.0 | real UI |
