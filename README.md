@@ -4,7 +4,7 @@ A live chat and social app: user accounts, posts and likes, 1:1 and group chats,
 
 This is a learning and portfolio project with a strong focus on security. It's built in small milestones, and every milestone ends deployed and tagged.
 
-**Live API:** https://wyd-chat-app.onrender.com · [Swagger UI](https://wyd-chat-app.onrender.com/docs)
+**Live API:** https://wyd-chat.up.railway.app · [Swagger UI](https://wyd-chat.up.railway.app/docs)
 
 ## Repository layout
 
