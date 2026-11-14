@@ -244,6 +244,7 @@ Now that ~15 endpoints exist, manual re-testing hurts. That's the motivation. Do
 - **M5: Advanced auth:** TOTP 2FA + backup codes + step-up auth; OAuth with GitHub and Google.
 - **M6: Polish and observability:** typing indicators, read receipts, unread counts, presence, notifications; structlog JSON logs, request IDs, OpenTelemetry, audit log; a multi-stage non-root Dockerfile.
 - **M7: Scale:** run 2 workers, watch chat and rate limiting break *on purpose*, then fix them with Redis pub/sub and Redis-backed rate limits.
+- **M8 (optional, at the very end, or saved for the next project): Cloud fundamentals.** WYD stays on Railway. Once the app is finished, learn the basics of one big cloud (AWS, Azure or Google Cloud) and try deploying WYD there: IAM and least privilege, networking (VPC, security groups), a container service (e.g. AWS ECS/App Runner, Azure Container Apps, Google Cloud Run), managed secrets, and billing alerts set up *before* anything else. The user decides at the end whether to do this here or in the next project.
 
 ## Testing conventions (from H1)
 
