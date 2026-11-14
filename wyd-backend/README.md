@@ -10,22 +10,31 @@ This is a learning and portfolio project, built milestone by milestone with a st
 
 ## Status: M1, accounts (in progress → `v0.1.0`)
 
-Accounts with Argon2id password hashing and a JWT access token in an httpOnly cookie. Previous release: `v0.0.1` (M0, walking skeleton).
+Accounts with Argon2id password hashing, a JWT access token in an httpOnly cookie, and customizable profiles. Previous release: `v0.0.1` (M0, walking skeleton).
 
 | Endpoint | Auth | What it does |
 |---|---|---|
-| `POST /v1/auth/register` | – | Create an account (email, username, password). Returns the public profile |
-| `POST /v1/auth/login` | – | Check email + password, set the access token cookie |
+| `POST /v1/auth/register` | – | Create an account (email, username, password). Returns a summary: id, username, join date |
+| `POST /v1/auth/login` | – | Check email + password, set the access token cookie. Returns your public profile |
 | `POST /v1/auth/logout` | – | Delete the access token cookie |
-| `GET /v1/users/me` | cookie | Your own account, including email |
+| `GET /v1/users/me` | cookie | Your own account (including email) with your full profile (including theme) |
 | `PATCH /v1/users/me` | cookie | Change your username |
-| `GET /v1/users/{username}` | – | Public profile (id, username, join date). Case-insensitive lookup |
+| `PATCH /v1/users/me/profile` | cookie | Change display name, bio, pronouns, accent color or theme. Send only the fields you want to change |
+| `GET /v1/users/{username}` | – | Public account (id, username, join date) with its public profile (no theme). Case-insensitive lookup |
 | `GET /health` | – | Runs `SELECT 1` against Postgres |
 | `GET /docs` | – | Interactive API docs (intentionally public until the frontend exists) |
 
-**Try it in Swagger UI:** `register` → `login` (the browser stores the cookie) → `GET /v1/users/me`.
+**Try it in Swagger UI:** `register` → `login` (the browser stores the cookie) → `GET /v1/users/me` → `PATCH /v1/users/me/profile` with e.g. `{"bio": "hi", "accent_color": "#ff8800"}`.
 
-Still to do in M1: profile fields (display name, bio, pronouns, accent color, theme).
+Profile fields:
+
+| Field | Rules | Visible to |
+|---|---|---|
+| `display_name` | 1–64 characters after trimming, no control or format characters. Starts as your username. Can't be `null` | everyone |
+| `bio` | Up to 128 characters, line breaks allowed. `null` clears it | everyone |
+| `pronouns` | Up to 16 characters. `null` clears it | everyone |
+| `accent_color` | Hex color `#RRGGBB`, stored uppercase. `null` means the app default | everyone |
+| `theme` | `light`, `dark` or `system` (default). `null` resets it to `system` | only you |
 
 ## Stack
 
@@ -114,8 +123,19 @@ Do not put `?sslmode=...` in the URLs: asyncpg doesn't understand libpq query pa
 - **Enumeration-safe login.** Unknown email and wrong password return the same `401`, and the unknown-email path still does Argon2 work so response times are similar.
 - **JWT access token** (HS256) in a `__Host-` cookie: `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`. Decoding pins the algorithm and requires `exp`, `iat`, `iss`, `aud`, `sub` and `jti`. `sub` is parsed into a UUID at that boundary, so a malformed token is a `401`, never a `500`. The cookie attributes live in one shared constant, so setting and deleting the cookie can't drift apart.
 - **Mass-assignment protection** on `PATCH /users/me`: the schema rejects unknown fields (`extra="forbid"` → `422`), only fields the client actually sent are applied (`exclude_unset`), and the repository enforces its own allowlist of updatable columns. Email and password changes are deliberately not part of this endpoint (they will need re-authentication).
-- **Public profiles hide inactive accounts.** A deactivated user gets the same `404` as a username that doesn't exist. The public schema exposes only `id`, `username` and `created_at`.
+- **Public profiles hide inactive accounts.** A deactivated user gets the same `404` as a username that doesn't exist. The public schema exposes only `id`, `username`, `created_at` and the public profile fields.
 - **Layering.** Services raise domain exceptions (`UsernameTaken`, `InvalidCredentials`, `UserNotFound`, …); handlers in `core/exceptions.py` map them to HTTP responses. ORM models never leave the API: every route has a `response_model`, so fields like `hashed_password` can't leak.
+
+### Profiles (M1)
+
+- **Separate `user_profiles` table, 1:1 with `users`.** `user_id` is both the primary key and a foreign key with `ON DELETE CASCADE`. Account data (credentials, email) and presentation data (bio, theme…) live in different tables, which keeps the `users` table small and makes it clear which data is sensitive.
+- **The database creates the profile.** An `AFTER INSERT` trigger on `users` inserts the profile row (display name = username), so every way of creating a user gets a profile, not only the code path through the API. The migration that added the table also backfilled profiles for existing users with `INSERT … WHERE NOT EXISTS`. Note: tests must build their database with Alembic, not `metadata.create_all()`, which doesn't know about the trigger.
+- **Self-heal on write, never on read.** If a profile row is ever missing, `PATCH /users/me/profile` recreates it instead of failing with a `500` the user can't fix. The insert runs in a **savepoint**, so if a concurrent request created the row first, only the savepoint rolls back; the unique violation is swallowed and the existing row is re-read. Any other database error is re-raised. `GET` requests never write: a missing profile is returned as `user_profile: null`. Safe methods must not change state (they're also the methods CSRF protection skips).
+- **Validation in two layers.** Pydantic validates and normalises the input (trimming, uppercasing the color, `\r\n` → `\n`, `null` → the column's default). The database enforces the same rules with `CHECK` constraints on `theme` and `accent_color`, as the last line of defence. The allowed themes are defined once as a `Literal` type, and the database constraint is generated from it.
+- **Unicode-safe text.** Display name, bio and pronouns reject every Unicode control and format character (category `C*`), except a line break in the bio. This blocks invisible characters and **right-to-left overrides** (`U+202E`), which can make a display name look like a different name (impersonation).
+- **Mass-assignment protection** works as on `PATCH /users/me`: `extra="forbid"`, `exclude_unset`, and a column allowlist in the repository. The profile has its own endpoint and schema, so a stray `username` in a profile update is a `422`, not a silent change.
+- **Eager loading by design.** The `user_profile` relationship is configured with `lazy="raise"`: an accidental lazy load (which would be an implicit, async-unsafe query) fails loudly instead of quietly running extra queries. Every user query loads the profile explicitly with `joinedload` (one query with a `LEFT OUTER JOIN`).
+- **Known limitation:** because format characters are rejected, emoji sequences joined with a zero-width joiner (`U+200D`, e.g. 👨‍👩‍👧 or 🏳️‍🌈) are rejected in display names, bios and pronouns. Single emoji like 😀 work. Allowing ZWJ only inside valid emoji sequences would need an emoji-sequence parser, so it's out of scope for now.
 
 ## Deployment
 

@@ -69,6 +69,7 @@ The rule is to ship early and harden later. Every milestone ends **deployed, tag
 | M3 Realtime DMs over WebSockets | v0.5.0 | two browsers chatting |
 | M4 Group chats + image uploads (R2) | **v1.0.0 MVP** | portfolio launch |
 | M5+ 2FA/OAuth, polish + observability, Redis scaling | — | — |
+| M8 (optional, maybe the next project) Cloud fundamentals: AWS, Azure or Google Cloud | — | WYD redeployed on a big cloud |
 
 The frontend (`wyd-frontend/`) starts at **F1**, after the backend auth is hardened and before realtime chat.
 
