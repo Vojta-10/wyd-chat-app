@@ -4,9 +4,9 @@ FastAPI backend for **WYD**, a live chat and social app (accounts, posts and lik
 
 This is a learning and portfolio project, built milestone by milestone with a strong focus on security. Every milestone ends deployed and tagged.
 
-**Live:** https://wyd-chat-app.onrender.com · [Swagger UI (`/docs`)](https://wyd-chat-app.onrender.com/docs)
+**Live:** https://wyd-chat.up.railway.app · [Swagger UI (`/docs`)](https://wyd-chat.up.railway.app/docs)
 
-> Hosted on Render's free tier: after ~15 minutes of inactivity the service spins down, so the first request can take up to a minute.
+> The database (Neon) scales to zero when idle, so the first request after a quiet period can take about a second longer.
 
 ## Status: M1, accounts (in progress → `v0.1.0`)
 
@@ -44,7 +44,7 @@ Profile fields:
 - **PostgreSQL on Neon** (serverless, scales to zero)
 - **argon2-cffi** (Argon2id password hashing), **PyJWT** (access tokens)
 - **pydantic-settings** for 12-factor configuration
-- **Render** for hosting
+- **Railway** for hosting
 
 ## Project structure
 
@@ -139,11 +139,14 @@ Do not put `?sslmode=...` in the URLs: asyncpg doesn't understand libpq query pa
 
 ## Deployment
 
-- **Render** web service, auto-deploys from `main`.
-- Root directory: `wyd-backend` · Build: `uv sync --locked && uv run alembic upgrade head` · Start: `uv run fastapi run`
-- **Migrations run in the build step** (Render's pre-deploy command is paid-only). The old version keeps serving while the new one builds, so every migration must stay compatible with the code that's currently live (expand/contract). A failed deploy does not roll back the database.
-- **Single worker**, on purpose: later milestones keep WebSocket connections and rate-limit counters in process memory. Scaling out with Redis is a planned lesson (M7).
-- Environment variables are set in the Render dashboard only. Production uses Neon's `main` branch with its own role password, separate from the `dev` branch used locally.
+- **Railway** (Hobby plan) web service, auto-deploys from `main`. Moved from Render's free tier in M1 because its cold starts (up to a minute after idling) made the live demo unusable.
+- Root directory: `wyd-backend` · Builder: Railpack (dependencies from `uv.lock`, Python version from `.python-version`) · Pre-deploy: `uv run alembic upgrade head` · Start: `uv run fastapi run` · Healthcheck: `/health`
+- **Build, release, run are separate stages** ([12-factor](https://12factor.net/build-release-run)). The build only installs dependencies and has no side effects. Migrations run in Railway's **pre-deploy command**, which starts only after a successful build. If the migration fails, the deploy stops and the previous version keeps serving. A failed deploy does not roll back the database.
+- **Zero-downtime switchover.** Railway sends traffic to the new version only after `/health` returns `200`, and `/health` checks the database. Until then the old version keeps serving, *after* the migration has already run, so every migration must stay compatible with the code that's currently live (expand/contract).
+- **Port:** Railway injects `PORT` and the FastAPI CLI reads it (`--port` defaults to the `PORT` env var). `PORT=8080` is also set explicitly, so the app and Railway's healthcheck agree on the port.
+- **Single replica, single worker**, on purpose: later milestones keep WebSocket connections and rate-limit counters in process memory. Scaling out with Redis is a planned lesson (M7).
+- Settings are configured in the Railway dashboard, not with a `railway.toml` file: Railway deprecated config-as-code (it stops being read on 2026-12-01) in favour of a TypeScript-based infrastructure-as-code setup, which is more than this single service needs.
+- Environment variables are set in the Railway dashboard only. Production uses Neon's `main` branch with its own role password, separate from the `dev` branch used locally.
 
 ## Known security gaps
 
@@ -159,7 +162,7 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 | No security headers (CSP, HSTS, nosniff…), no `TrustedHostMiddleware`, no request body size limit | Low: the API serves only JSON, no HTML pages. Oversized bodies are parsed before field limits reject them | H1 |
 | `/docs` is public | Intentional: the live docs are the demo until the frontend exists | F1 |
 | One Neon role per branch with full privileges (no separate least-privilege app role vs. migration role) | A SQL injection or leaked app credential could run DDL | later |
-| SQL echo logging in `dev` prints bound parameters | The local dev terminal shows emails and Argon2 password hashes (production is not affected: echo is off) | M1 (log redaction) |
+| SQL echo logging in `dev` prints bound parameters | The local dev terminal shows emails and Argon2 password hashes (production is not affected: echo is off) | M6 (log redaction) |
 | No automated tests, type checking in CI, dependency audit, or secret scanning | Regressions and leaked secrets are caught only by manual review (`git diff --staged` before every commit). Test cases are tracked as `TODO(test)` comments | H1 |
 | Register reveals whether an email is already registered (`409`), so emails can be enumerated. Login itself is enumeration-safe | Anyone can check whether an email has an account. Rate limiting (H1) only slows this down | Fix: a generic register response plus an activation email. Needs email sending (not scheduled yet) |
 | No email verification | Someone can register with another person's email before they do (account pre-hijacking) | Together with email sending (not scheduled yet) |
