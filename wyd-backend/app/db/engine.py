@@ -23,6 +23,7 @@ async def initialize() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
             "ssl": ssl.create_default_context(),
         },
         pool_pre_ping=True,
+        hide_parameters=True,
     )
     session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
     try:
