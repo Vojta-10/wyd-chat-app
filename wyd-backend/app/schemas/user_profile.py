@@ -1,4 +1,3 @@
-import unicodedata
 from typing import Annotated, Any
 
 from pydantic import (
@@ -11,23 +10,13 @@ from pydantic import (
 )
 
 from app.core.constants import AllowedThemes
+from app.utils.validations import reject_control_chars
 
 type AccentColor = Annotated[
     str,
     Field(pattern=r"^#[0-9a-fA-F]{6}$"),
     AfterValidator(lambda value: value.upper()),
 ]
-
-
-def reject_control_chars(exempt_chars: frozenset[str] = frozenset()) -> AfterValidator:
-    def _validator(value: str) -> str:
-        categories = [(char, unicodedata.category(char)) for char in value]
-        for char, category in categories:
-            if category.startswith("C") and char not in exempt_chars:
-                raise ValueError("Contains invalid characters")
-        return value
-
-    return AfterValidator(_validator)
 
 
 type DisplayName = Annotated[
