@@ -20,7 +20,7 @@ def one_row_to_post(row) -> PostPublic:
             },
             "description": row.description,
             "like_count": row.like_count,
-            "is_liked": True,
+            "is_liked": row.is_liked,
             "created_at": row.created_at,
             "updated_at": row.updated_at,
         }
@@ -30,7 +30,7 @@ def one_row_to_post(row) -> PostPublic:
 async def get_format_feed(
     session: AsyncSession, user: User, page_size: int, cursor: UUID | None
 ) -> dict[str, Any | list[PostPublic]]:
-    result = await get_feed(session, user, cursor, page_size)
+    result = await get_feed(session, user.id, cursor, page_size)
     has_more = len(result) >= page_size + 1
     next_cursor = None
     if has_more:

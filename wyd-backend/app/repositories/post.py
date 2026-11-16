@@ -1,16 +1,17 @@
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.post import Post
+from app.models.post_like import PostLike
 from app.models.user import User
 from app.models.user_profile import UserProfile
 
 
 async def get_feed(
     session: AsyncSession,
-    user: User | None,
+    user_id: UUID,
     cursor: UUID | None,
     page_size: int = 20,
 ):
@@ -27,14 +28,14 @@ async def get_feed(
             func.coalesce(UserProfile.display_name, User.username).label(
                 "display_name"
             ),
+            exists()
+            .where(and_(PostLike.post_id == Post.id, PostLike.user_id == user_id))
+            .label("is_liked"),
         )
         .join(Post.user)
         .outerjoin(User.user_profile)
         .where(User.is_active == True)
     )
-    # if user is not None:
-    #     exist_criteria = select(PostLike).where(PostLike.user_id == user.id).exists()
-    #     stmt = stmt.where(exist_criteria)
 
     if cursor is not None:
         stmt = stmt.where(Post.id < cursor)
