@@ -49,6 +49,11 @@ class PostPublic(BaseModel):
     updated_at: datetime
 
 
+class PostPaginationOutput(BaseModel):
+    next_cursor: UUID | None = None
+    posts: list[PostPublic]
+
+
 class PostCreate(PostBase):
     description: Description
 
