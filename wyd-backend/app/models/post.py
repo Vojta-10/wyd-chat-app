@@ -29,4 +29,5 @@ class Post(Base):
     __table_args__ = (
         Index(None, user_id, id),
         CheckConstraint("LENGTH(description) >= 1", name="description_length_check"),
+        CheckConstraint("like_count >= 0", name="non_negative_like_count"),
     )
