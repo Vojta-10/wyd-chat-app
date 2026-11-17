@@ -35,7 +35,7 @@ class UserBase(BaseModel):
     username: Annotated[
         str,
         username_constraint,
-        AfterValidator(lambda value: value not in reserved_usernames),
+        AfterValidator(lambda value: value.lower() not in reserved_usernames),
     ]
 
 
