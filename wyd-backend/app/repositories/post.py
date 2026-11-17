@@ -45,9 +45,11 @@ async def get_feed(
     user_id: UUID | None,
     cursor: UUID | None,
     page_size: int = 20,
+    target_user_id: UUID | None = None,
 ):
     stmt = get_sql_stmt_post_info(user_id)
-
+    if target_user_id is not None:
+        stmt = stmt.where(Post.user_id == target_user_id)
     if cursor is not None:
         stmt = stmt.where(Post.id < cursor)
     stmt = stmt.order_by(Post.id.desc()).limit(page_size + 1)

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import PostForbiddenToAccess, PostNotFound
+from app.core.exceptions import PostForbiddenToAccess, PostNotFound, UserNotFound
 from app.models.user import User
 from app.repositories.post import (
     create_post,
@@ -15,6 +15,7 @@ from app.repositories.post import (
     patch_post,
     unlike_post,
 )
+from app.repositories.user import get_user_by_username_no_profile_join
 from app.schemas.post import PostCreate, PostPaginationOutput, PostPublic
 
 
@@ -38,10 +39,27 @@ def one_row_to_post(row) -> PostPublic:
 
 
 async def get_format_feed(
-    session: AsyncSession, user: User | None, page_size: int, cursor: UUID | None
+    session: AsyncSession,
+    user: User | None,
+    page_size: int,
+    cursor: UUID | None,
+    target_username: str | None = None,
 ) -> PostPaginationOutput:
     user_id = user.id if user is not None else None
-    result = await get_feed(session, user_id, cursor, page_size)
+    target_user = None
+    if target_username is not None:
+        target_user = await get_user_by_username_no_profile_join(
+            session, target_username
+        )
+        if target_user is None or not target_user.is_active:
+            raise UserNotFound()
+    result = await get_feed(
+        session,
+        user_id,
+        cursor,
+        page_size,
+        target_user.id if target_user is not None else None,
+    )
     has_more = len(result) >= page_size + 1
     next_cursor = None
     if has_more:
