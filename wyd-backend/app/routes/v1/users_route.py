@@ -1,8 +1,10 @@
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
-from app.dependencies import GetCurrentUserDep, SessionDep
+from app.dependencies import GetCurrentUserDep, GetCurrentUserOptionalDep, SessionDep
+from app.schemas.post import PostPaginationOutput
 from app.schemas.user import (
     UserPatch,
     UserPublic,
@@ -10,6 +12,7 @@ from app.schemas.user import (
     username_constraint,
 )
 from app.schemas.user_profile import UserProfilePatch, UserProfileSelfBase
+from app.services.posts import get_format_feed
 from app.services.user_profiles import update_user_profile
 from app.services.users import get_public_profile, update_user_fields
 
@@ -73,3 +76,26 @@ async def update_me_profile(
 ):
     excluded_payload = payload.model_dump(exclude_unset=True)
     return await update_user_profile(session, user, excluded_payload)
+
+
+# TODO(test): GET /{username}/posts
+#   - unknown username -> 404; inactive user -> 404 (same body: no existence leak)
+#   - user with 0 posts -> 200, posts [], next_cursor null
+#   - different case ("Vojta_Test" vs "vojta_test") -> same result
+#   - only this user's posts, newest first; paging with page_size=2 has no gaps
+#     or duplicates and ends with next_cursor null
+#   - logged out -> every is_liked false; logged in -> is_liked matches own likes
+#   - malformed username ("ab", "a b") -> 422
+@users_router.get(
+    "/{username}/posts",
+    status_code=status.HTTP_200_OK,
+    response_model=PostPaginationOutput,
+)
+async def get_users_posts(
+    session: SessionDep,
+    username: Annotated[str, username_constraint],
+    user: GetCurrentUserOptionalDep,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    cursor: UUID | None = None,
+):
+    return await get_format_feed(session, user, page_size, cursor, username)

@@ -11,18 +11,23 @@ from app.core.exceptions import (
     InactiveAccount,
     InvalidCredentials,
     InvalidToken,
+    PostForbiddenToAccess,
+    PostNotFound,
     UsernameTaken,
     UserNotFound,
     email_already_registered_handler,
     inactive_account_handler,
     invalid_credentials_handler,
     invalid_token_handler,
+    post_forbidden_to_access_handler,
+    post_not_found_handler,
     user_not_found_handler,
     username_taken_handler,
 )
 from app.db.engine import initialize
 from app.dependencies import SessionDep
 from app.routes.v1.auth_route import auth_router
+from app.routes.v1.posts_route import posts_router
 from app.routes.v1.users_route import users_router
 
 
@@ -48,6 +53,8 @@ app.add_exception_handler(UsernameTaken, username_taken_handler)
 app.add_exception_handler(InactiveAccount, inactive_account_handler)
 app.add_exception_handler(InvalidToken, invalid_token_handler)
 app.add_exception_handler(UserNotFound, user_not_found_handler)
+app.add_exception_handler(PostNotFound, post_not_found_handler)
+app.add_exception_handler(PostForbiddenToAccess, post_forbidden_to_access_handler)
 
 
 @app.get("/")
@@ -63,3 +70,4 @@ async def db_health(session: SessionDep):
 
 app.include_router(auth_router, prefix="/v1/auth")
 app.include_router(users_router, prefix="/v1/users")
+app.include_router(posts_router, prefix="/v1/posts")
