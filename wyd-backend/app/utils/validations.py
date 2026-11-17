@@ -12,3 +12,12 @@ def reject_control_chars(exempt_chars: frozenset[str] = frozenset()) -> AfterVal
         return value
 
     return AfterValidator(_validator)
+
+
+def username_not_reserved(reserved_names: list[str]) -> AfterValidator:
+    def _validator(username: str) -> str:
+        if username.lower() in reserved_names:
+            raise ValueError("Reserved username")
+        return username
+
+    return AfterValidator(_validator)

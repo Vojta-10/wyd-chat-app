@@ -3,7 +3,6 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import (
-    AfterValidator,
     BaseModel,
     ConfigDict,
     EmailStr,
@@ -13,11 +12,8 @@ from pydantic import (
 )
 
 from app.schemas.user_profile import UserProfilePublicBase, UserProfileSelfBase
+from app.utils.validations import username_not_reserved
 
-# TODO(M2): reserved usernames, checked case-insensitively on register and PATCH.
-#   Route words that would shadow /users/{username} (search, settings, blocked...)
-#   plus impersonation names (admin, support, wyd...). Decide before M2 adds the
-#   first /users/<word> route.
 reserved_usernames = [
     "search",
     "settings",
@@ -35,7 +31,7 @@ class UserBase(BaseModel):
     username: Annotated[
         str,
         username_constraint,
-        AfterValidator(lambda value: value.lower() not in reserved_usernames),
+        username_not_reserved(reserved_usernames),
     ]
 
 
@@ -80,7 +76,9 @@ class UserSelf(BaseModel):
 
 class UserPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    username: Annotated[str | None, username_constraint] = None
+    username: Annotated[
+        str | None, username_constraint, username_not_reserved(reserved_usernames)
+    ] = None
 
     @field_validator("username", mode="before")
     @classmethod
