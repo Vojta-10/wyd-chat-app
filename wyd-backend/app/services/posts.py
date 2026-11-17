@@ -28,9 +28,10 @@ def one_row_to_post(row) -> PostPublic:
 
 
 async def get_format_feed(
-    session: AsyncSession, user: User, page_size: int, cursor: UUID | None
+    session: AsyncSession, user: User | None, page_size: int, cursor: UUID | None
 ) -> dict[str, Any | list[PostPublic]]:
-    result = await get_feed(session, user.id, cursor, page_size)
+    user_id = user.id if user is not None else None
+    result = await get_feed(session, user_id, cursor, page_size)
     has_more = len(result) >= page_size + 1
     next_cursor = None
     if has_more:

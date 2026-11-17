@@ -11,7 +11,7 @@ from app.models.user_profile import UserProfile
 
 async def get_feed(
     session: AsyncSession,
-    user_id: UUID,
+    user_id: UUID | None,
     cursor: UUID | None,
     page_size: int = 20,
 ):
