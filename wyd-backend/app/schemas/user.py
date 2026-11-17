@@ -2,7 +2,15 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    SecretStr,
+    field_validator,
+)
 
 from app.schemas.user_profile import UserProfilePublicBase, UserProfileSelfBase
 
@@ -10,11 +18,25 @@ from app.schemas.user_profile import UserProfilePublicBase, UserProfileSelfBase
 #   Route words that would shadow /users/{username} (search, settings, blocked...)
 #   plus impersonation names (admin, support, wyd...). Decide before M2 adds the
 #   first /users/<word> route.
+reserved_usernames = [
+    "search",
+    "settings",
+    "blocked",
+    "admin",
+    "me",
+    "support",
+    "wyd",
+    "wyd-support",
+]
 username_constraint = Field(min_length=5, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 class UserBase(BaseModel):
-    username: Annotated[str, username_constraint]
+    username: Annotated[
+        str,
+        username_constraint,
+        AfterValidator(lambda value: value not in reserved_usernames),
+    ]
 
 
 class UserAuthBase(BaseModel):
