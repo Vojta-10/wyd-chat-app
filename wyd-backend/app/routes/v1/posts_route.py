@@ -15,7 +15,9 @@ from app.services.posts import (
     delete_post_service,
     get_format_feed,
     get_post_service,
+    like_post_service,
     patch_post_service,
+    unlike_post_service,
 )
 
 posts_router = APIRouter(tags=["posts"])
@@ -95,3 +97,29 @@ async def patch_post(
 ):
     excluded_payload = payload.model_dump(exclude_unset=True)
     return await patch_post_service(session, post_id, user, excluded_payload)
+
+
+# TODO(test): like (PUT)
+#   - not logged in -> 401
+#   - like -> 200, is_liked true, like_count +1 (check the DB too)
+#   - like twice -> second call 200, like_count unchanged, still one post_likes row
+#   - unknown post -> 404; post by an inactive author -> 404
+#   - user A's like doesn't make is_liked true for user B
+@posts_router.put(
+    "/{post_id}/like", status_code=status.HTTP_200_OK, response_model=PostPublic
+)
+async def like_post(session: SessionDep, user: GetCurrentUserDep, post_id: UUID):
+    return await like_post_service(session, post_id, user)
+
+
+# TODO(test): unlike (DELETE)
+#   - not logged in -> 401
+#   - unlike -> 200, is_liked false, like_count -1
+#   - unlike a post you never liked -> 200, like_count unchanged (never below 0)
+#   - user B's unlike never removes user A's like
+#   - unknown post -> 404
+@posts_router.delete(
+    "/{post_id}/like", status_code=status.HTTP_200_OK, response_model=PostPublic
+)
+async def unlike_post(session: SessionDep, user: GetCurrentUserDep, post_id: UUID):
+    return await unlike_post_service(session, post_id, user)

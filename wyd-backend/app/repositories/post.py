@@ -1,7 +1,8 @@
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, exists, func, select
+from sqlalchemy import and_, delete, exists, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -92,3 +93,19 @@ async def patch_post(
     except StaleDataError:
         return None
     return post
+
+
+async def like_post(session: AsyncSession, post_id: UUID, user_id: UUID):
+    stmt = (
+        insert(PostLike)
+        .values(post_id=post_id, user_id=user_id)
+        .on_conflict_do_nothing(index_elements=[PostLike.post_id, PostLike.user_id])
+    )
+    await session.execute(stmt)
+
+
+async def unlike_post(session: AsyncSession, post_id: UUID, user_id: UUID):
+    stmt = delete(PostLike).where(
+        PostLike.user_id == user_id, PostLike.post_id == post_id
+    )
+    await session.execute(stmt)

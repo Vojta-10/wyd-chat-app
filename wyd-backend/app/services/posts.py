@@ -11,7 +11,9 @@ from app.repositories.post import (
     get_feed,
     get_post_by_id,
     get_post_by_id_full_user_info,
+    like_post,
     patch_post,
+    unlike_post,
 )
 from app.schemas.post import PostCreate, PostPaginationOutput, PostPublic
 
@@ -93,4 +95,26 @@ async def patch_post_service(
     post = await get_post_by_id_full_user_info(session, post_id, user.id)
     if post is None:
         raise PostNotFound()
+    return one_row_to_post(post)
+
+
+async def like_post_service(
+    session: AsyncSession, post_id: UUID, user: User
+) -> PostPublic:
+    post = await get_post_by_id_full_user_info(session, post_id)
+    if post is None:
+        raise PostNotFound()
+    await like_post(session, post_id, user.id)
+    post = await get_post_by_id_full_user_info(session, post_id, user_id=user.id)
+    return one_row_to_post(post)
+
+
+async def unlike_post_service(
+    session: AsyncSession, post_id: UUID, user: User
+) -> PostPublic:
+    post = await get_post_by_id_full_user_info(session, post_id)
+    if post is None:
+        raise PostNotFound()
+    await unlike_post(session, post_id, user.id)
+    post = await get_post_by_id_full_user_info(session, post_id, user.id)
     return one_row_to_post(post)
