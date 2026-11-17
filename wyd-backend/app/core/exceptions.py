@@ -87,3 +87,23 @@ async def user_not_found_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND, content={"detail": "User not found"}
     )
+
+
+class PostNotFound(Exception):
+    pass
+
+
+async def post_not_found_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Post not found"}
+    )
+
+
+class PostForbiddenToAccess(Exception):
+    pass
+
+
+async def post_forbidden_to_access_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Post not accessible"}
+    )

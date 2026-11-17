@@ -11,12 +11,16 @@ from app.core.exceptions import (
     InactiveAccount,
     InvalidCredentials,
     InvalidToken,
+    PostForbiddenToAccess,
+    PostNotFound,
     UsernameTaken,
     UserNotFound,
     email_already_registered_handler,
     inactive_account_handler,
     invalid_credentials_handler,
     invalid_token_handler,
+    post_forbidden_to_access_handler,
+    post_not_found_handler,
     user_not_found_handler,
     username_taken_handler,
 )
@@ -49,6 +53,8 @@ app.add_exception_handler(UsernameTaken, username_taken_handler)
 app.add_exception_handler(InactiveAccount, inactive_account_handler)
 app.add_exception_handler(InvalidToken, invalid_token_handler)
 app.add_exception_handler(UserNotFound, user_not_found_handler)
+app.add_exception_handler(PostNotFound, post_not_found_handler)
+app.add_exception_handler(PostForbiddenToAccess, post_forbidden_to_access_handler)
 
 
 @app.get("/")

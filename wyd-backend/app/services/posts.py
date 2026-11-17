@@ -3,9 +3,17 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import PostForbiddenToAccess, PostNotFound
 from app.models.user import User
-from app.repositories.post import get_feed
-from app.schemas.post import PostPublic
+from app.repositories.post import (
+    create_post,
+    delete_post,
+    get_feed,
+    get_post_by_id,
+    get_post_by_id_full_user_info,
+    patch_post,
+)
+from app.schemas.post import PostCreate, PostPaginationOutput, PostPublic
 
 
 def one_row_to_post(row) -> PostPublic:
@@ -29,7 +37,7 @@ def one_row_to_post(row) -> PostPublic:
 
 async def get_format_feed(
     session: AsyncSession, user: User | None, page_size: int, cursor: UUID | None
-) -> dict[str, Any | list[PostPublic]]:
+) -> PostPaginationOutput:
     user_id = user.id if user is not None else None
     result = await get_feed(session, user_id, cursor, page_size)
     has_more = len(result) >= page_size + 1
@@ -37,4 +45,52 @@ async def get_format_feed(
     if has_more:
         next_cursor = result[page_size - 1].id
     formatted_results = [one_row_to_post(row) for row in result[:page_size]]
-    return {"next_cursor": next_cursor, "posts": formatted_results}
+    return PostPaginationOutput.model_validate(
+        {"next_cursor": next_cursor, "posts": formatted_results}
+    )
+
+
+async def create_post_service(
+    session: AsyncSession, user_id: UUID, payload: PostCreate
+) -> PostPublic:
+    post = await create_post(session, user_id, payload.description)
+    post = await get_post_by_id_full_user_info(session, post.id, user_id)
+    if post is None:
+        raise PostNotFound()
+    return one_row_to_post(post)
+
+
+async def get_post_service(
+    session: AsyncSession, post_id: UUID, user: User | None
+) -> PostPublic:
+    user_id = user.id if user is not None else None
+    post = await get_post_by_id_full_user_info(session, post_id, user_id)
+    if post is None:
+        raise PostNotFound()
+    return one_row_to_post(post)
+
+
+async def delete_post_service(session: AsyncSession, post_id: UUID, user: User):
+    post = await get_post_by_id(session, post_id)
+    if post is None:
+        raise PostNotFound()
+    if post.user_id != user.id:
+        raise PostForbiddenToAccess()
+    await delete_post(session, post)
+
+
+async def patch_post_service(
+    session: AsyncSession, post_id: UUID, user: User, payload: dict[str, Any]
+) -> PostPublic:
+    post = await get_post_by_id(session, post_id)
+    if post is None:
+        raise PostNotFound()
+    if post.user_id != user.id:
+        raise PostForbiddenToAccess()
+    updated_post = await patch_post(session, post, payload)
+    if updated_post is None:
+        raise PostNotFound()
+    post = await get_post_by_id_full_user_info(session, post_id, user.id)
+    if post is None:
+        raise PostNotFound()
+    return one_row_to_post(post)
