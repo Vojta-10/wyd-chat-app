@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.exceptions import (
+    BlockSelfError,
     EmailAlreadyRegistered,
     InactiveAccount,
     InvalidCredentials,
@@ -15,6 +16,7 @@ from app.core.exceptions import (
     PostNotFound,
     UsernameTaken,
     UserNotFound,
+    block_self_error_handler,
     email_already_registered_handler,
     inactive_account_handler,
     invalid_credentials_handler,
@@ -55,6 +57,7 @@ app.add_exception_handler(InvalidToken, invalid_token_handler)
 app.add_exception_handler(UserNotFound, user_not_found_handler)
 app.add_exception_handler(PostNotFound, post_not_found_handler)
 app.add_exception_handler(PostForbiddenToAccess, post_forbidden_to_access_handler)
+app.add_exception_handler(BlockSelfError, block_self_error_handler)
 
 
 @app.get("/")

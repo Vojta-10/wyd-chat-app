@@ -107,3 +107,14 @@ async def post_forbidden_to_access_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Post not accessible"}
     )
+
+
+class BlockSelfError(Exception):
+    pass
+
+
+async def block_self_error_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": "Can not block yourself"},
+    )

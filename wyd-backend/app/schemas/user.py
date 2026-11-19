@@ -23,6 +23,7 @@ reserved_usernames = [
     "support",
     "wyd",
     "wyd-support",
+    "block",
 ]
 username_constraint = Field(min_length=5, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
 
