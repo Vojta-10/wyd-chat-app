@@ -15,7 +15,10 @@ from app.repositories.post import (
     patch_post,
     unlike_post,
 )
-from app.repositories.user import get_user_by_username_no_profile_join
+from app.repositories.user import (
+    get_user_by_username_no_profile_join,
+    user_block_check_both_direction,
+)
 from app.schemas.post import PostCreate, PostPaginationOutput, PostPublic
 
 
@@ -52,6 +55,10 @@ async def get_format_feed(
             session, target_username
         )
         if target_user is None or not target_user.is_active:
+            raise UserNotFound()
+        if user is not None and await user_block_check_both_direction(
+            session, user, target_user.id
+        ):
             raise UserNotFound()
     result = await get_feed(
         session,
@@ -119,7 +126,7 @@ async def patch_post_service(
 async def like_post_service(
     session: AsyncSession, post_id: UUID, user: User
 ) -> PostPublic:
-    post = await get_post_by_id_full_user_info(session, post_id)
+    post = await get_post_by_id_full_user_info(session, post_id, user.id)
     if post is None:
         raise PostNotFound()
     await like_post(session, post_id, user.id)
@@ -130,7 +137,7 @@ async def like_post_service(
 async def unlike_post_service(
     session: AsyncSession, post_id: UUID, user: User
 ) -> PostPublic:
-    post = await get_post_by_id_full_user_info(session, post_id)
+    post = await get_post_by_id_full_user_info(session, post_id, user.id)
     if post is None:
         raise PostNotFound()
     await unlike_post(session, post_id, user.id)

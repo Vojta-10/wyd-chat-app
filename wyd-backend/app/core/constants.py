@@ -4,6 +4,7 @@ ISSUER = "wyd api"
 ACCESS_TOKEN_AUDIENCE = "access_token"
 ACCESS_COOKIE_NAME = "__Host-bearer-token"
 AllowedThemes = Literal["light", "dark", "system"]
+AllowedPostsVisibility = Literal["everybody", "logged-in", "nobody"]
 
 
 class CookieOptions(TypedDict):

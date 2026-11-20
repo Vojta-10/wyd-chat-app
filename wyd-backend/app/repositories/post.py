@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, select
+from sqlalchemy import and_, delete, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
@@ -10,13 +10,24 @@ from app.core.exceptions import DisallowedUpdateField
 from app.models.post import Post
 from app.models.post_like import PostLike
 from app.models.user import User
+from app.models.user_block import UserBlock
 from app.models.user_profile import UserProfile
 
 POST_UPDATEABLE_COLUMN_SET: frozenset[str] = frozenset(["description"])
 
 
 def get_sql_stmt_post_info(user_id: UUID | None):
-    return (
+    exists_subq1 = (
+        select(UserBlock.blocker_id)
+        .where(Post.user_id == UserBlock.blocker_id, UserBlock.blocked_id == user_id)
+        .exists()
+    )
+    exists_subq2 = (
+        select(UserBlock.blocked_id)
+        .where(Post.user_id == UserBlock.blocked_id, UserBlock.blocker_id == user_id)
+        .exists()
+    )
+    stmt = (
         select(
             Post.id,
             Post.description,
@@ -37,7 +48,15 @@ def get_sql_stmt_post_info(user_id: UUID | None):
         .join(Post.user)
         .outerjoin(User.user_profile)
         .where(User.is_active == True)
+        .where(~exists_subq1, ~exists_subq2)
     )
+    if user_id is None:
+        stmt = stmt.where(UserProfile.visibility == "everybody")
+    else:
+        stmt = stmt.where(
+            or_(UserProfile.visibility != "nobody", UserProfile.user_id == user_id)
+        )
+    return stmt
 
 
 async def get_feed(

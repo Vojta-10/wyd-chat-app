@@ -14,7 +14,12 @@ from app.schemas.user import (
 from app.schemas.user_profile import UserProfilePatch, UserProfileSelfBase
 from app.services.posts import get_format_feed
 from app.services.user_profiles import update_user_profile
-from app.services.users import get_public_profile, update_user_fields
+from app.services.users import (
+    block_user_service,
+    delete_block_service,
+    get_public_profile,
+    update_user_fields,
+)
 
 users_router = APIRouter(tags=["users"])
 
@@ -44,9 +49,11 @@ async def get_me(current_user: GetCurrentUserDep):
     "/{username}", status_code=status.HTTP_200_OK, response_model=UserPublic
 )
 async def get_user_by_username(
-    session: SessionDep, username: Annotated[str, username_constraint]
+    session: SessionDep,
+    username: Annotated[str, username_constraint],
+    user: GetCurrentUserOptionalDep,
 ):
-    return await get_public_profile(session, username)
+    return await get_public_profile(session, username, user)
 
 
 # TODO(test): PATCH /me
@@ -99,3 +106,21 @@ async def get_users_posts(
     cursor: UUID | None = None,
 ):
     return await get_format_feed(session, user, page_size, cursor, username)
+
+
+@users_router.put("/{username}/block", status_code=status.HTTP_204_NO_CONTENT)
+async def block_user(
+    session: SessionDep,
+    user: GetCurrentUserDep,
+    username: Annotated[str, username_constraint],
+):
+    await block_user_service(session, user, username)
+
+
+@users_router.delete("/{username}/block", status_code=status.HTTP_204_NO_CONTENT)
+async def unblock_user(
+    session: SessionDep,
+    user: GetCurrentUserDep,
+    username: Annotated[str, username_constraint],
+):
+    await delete_block_service(session, user, username)

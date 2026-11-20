@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy import VARCHAR, CheckConstraint, ForeignKey, column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.constants import AllowedThemes
+from app.core.constants import AllowedPostsVisibility, AllowedThemes
 from app.db.base import Base
 
 if TYPE_CHECKING:
@@ -23,12 +23,17 @@ class UserProfile(Base):
     theme: Mapped[str] = mapped_column(VARCHAR, server_default="system")
     accent_color: Mapped[str | None] = mapped_column(VARCHAR)
 
+    visibility: Mapped[str] = mapped_column(VARCHAR, server_default="everybody")
     user: Mapped["User"] = relationship(back_populates="user_profile")
 
     __table_args__ = (
         CheckConstraint(
             column("theme").in_(get_args(AllowedThemes)),
             name="allowed_theme",
+        ),
+        CheckConstraint(
+            column("visibility").in_(get_args(AllowedPostsVisibility)),
+            name="allowed_visibility",
         ),
         CheckConstraint(
             "accent_color ~ '^#[0-9A-F]{6}$'", name="accent_color_hex_format"
