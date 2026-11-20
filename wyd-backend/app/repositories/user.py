@@ -79,12 +79,12 @@ async def get_user_by_id(session: AsyncSession, user_id: UUID) -> User | None:
 
 
 async def get_user_by_username(session: AsyncSession, username: str) -> User | None:
-    result = await session.execute(
+    stmt = (
         select(User)
         .where(func.lower(User.username) == func.lower(username))
         .options(joinedload(User.user_profile))
     )
-    return result.scalar_one_or_none()
+    return (await session.execute(stmt)).scalar_one_or_none()
 
 
 async def get_user_by_username_no_profile_join(
