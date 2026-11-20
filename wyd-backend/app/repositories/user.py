@@ -2,7 +2,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import SecretStr
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -136,3 +136,63 @@ async def delete_likes_both_directions(
             )
         )
     )
+
+
+async def user_block_check_both_direction(
+    session: AsyncSession, user: User, target_user_id: UUID
+):
+    result = await session.execute(
+        select(1).where(
+            exists().where(
+                or_(
+                    and_(
+                        UserBlock.blocker_id == target_user_id,
+                        UserBlock.blocked_id == user.id,
+                    ),
+                    and_(
+                        UserBlock.blocked_id == target_user_id,
+                        UserBlock.blocker_id == user.id,
+                    ),
+                )
+            )
+        )
+    )
+    return result.scalars().one_or_none()
+
+
+# --- Alternative, NOT USED (written by Claude as a reference) ---------------
+# One place for the "blocked in either direction" rule. The function doesn't
+# run a query, it *builds* a SQL condition. `a` and `b` can each be a plain
+# UUID value or a column like Post.user_id, so the same rule fits both the
+# single-pair check and the feed WHERE.
+#
+# from sqlalchemy import ColumnElement
+#
+# def blocked_either_way(
+#     a: UUID | ColumnElement[UUID], b: UUID | ColumnElement[UUID]
+# ) -> ColumnElement[bool]:
+#     return exists().where(
+#         or_(
+#             and_(UserBlock.blocker_id == a, UserBlock.blocked_id == b),
+#             and_(UserBlock.blocker_id == b, UserBlock.blocked_id == a),
+#         )
+#     )
+#
+# 1) Single pair, would replace user_block_check_both_direction.
+#    SQL: SELECT EXISTS (SELECT * FROM user_blocks WHERE ... OR ...)
+#
+# async def is_blocked_either_way(
+#     session: AsyncSession, user_id: UUID, other_user_id: UUID
+# ) -> bool:
+#     result = await session.execute(
+#         select(blocked_either_way(user_id, other_user_id))
+#     )
+#     return result.scalar_one()
+#
+# 2) Feed, in get_sql_stmt_post_info, would replace exists_subq1/exists_subq2.
+#    Post.user_id is a column, so the subquery correlates to each post row:
+#    ... AND NOT (EXISTS (SELECT * FROM user_blocks
+#                         WHERE blocker_id = posts.user_id AND blocked_id = :me
+#                            OR blocker_id = :me AND blocked_id = posts.user_id))
+#
+#     .where(~blocked_either_way(Post.user_id, user_id))

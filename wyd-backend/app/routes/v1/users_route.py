@@ -49,9 +49,11 @@ async def get_me(current_user: GetCurrentUserDep):
     "/{username}", status_code=status.HTTP_200_OK, response_model=UserPublic
 )
 async def get_user_by_username(
-    session: SessionDep, username: Annotated[str, username_constraint]
+    session: SessionDep,
+    username: Annotated[str, username_constraint],
+    user: GetCurrentUserOptionalDep,
 ):
-    return await get_public_profile(session, username)
+    return await get_public_profile(session, username, user)
 
 
 # TODO(test): PATCH /me

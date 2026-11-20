@@ -10,12 +10,23 @@ from app.core.exceptions import DisallowedUpdateField
 from app.models.post import Post
 from app.models.post_like import PostLike
 from app.models.user import User
+from app.models.user_block import UserBlock
 from app.models.user_profile import UserProfile
 
 POST_UPDATEABLE_COLUMN_SET: frozenset[str] = frozenset(["description"])
 
 
 def get_sql_stmt_post_info(user_id: UUID | None):
+    exists_subq1 = (
+        select(UserBlock.blocker_id)
+        .where(Post.user_id == UserBlock.blocker_id, UserBlock.blocked_id == user_id)
+        .exists()
+    )
+    exists_subq2 = (
+        select(UserBlock.blocked_id)
+        .where(Post.user_id == UserBlock.blocked_id, UserBlock.blocker_id == user_id)
+        .exists()
+    )
     return (
         select(
             Post.id,
@@ -37,6 +48,7 @@ def get_sql_stmt_post_info(user_id: UUID | None):
         .join(Post.user)
         .outerjoin(User.user_profile)
         .where(User.is_active == True)
+        .where(~exists_subq1, ~exists_subq2)
     )
 
 
