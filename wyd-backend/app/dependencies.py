@@ -54,7 +54,7 @@ async def get_current_user_optional(
         return None
     try:
         user = await get_user_from_access_token(session, token, settings.JWT_SECRET)
-    except (InvalidToken, InactiveAccount):
+    except InvalidToken, InactiveAccount:
         return None
     return user
 

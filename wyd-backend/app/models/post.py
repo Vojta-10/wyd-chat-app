@@ -18,7 +18,7 @@ class Post(Base):
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     description: Mapped[str] = mapped_column(VARCHAR(256))
 
-    user: Mapped["User"] = relationship(lazy="raise")
+    user: Mapped[User] = relationship(lazy="raise")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()

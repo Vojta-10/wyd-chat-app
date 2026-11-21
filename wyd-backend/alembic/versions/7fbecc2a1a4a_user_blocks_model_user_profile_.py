@@ -9,6 +9,7 @@ Create Date: 2026-11-19 17:42:52.735094
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -75,7 +76,7 @@ def downgrade() -> None:
         constraint_name="ck_user_profiles_allowed_visibility",
         table_name="user_profiles",
     )
-    op.drop_column("user_profiles","visibility")
+    op.drop_column("user_profiles", "visibility")
     op.drop_index(op.f("ix_user_blocks_blocked_id"), table_name="user_blocks")
     op.drop_table("user_blocks")
     # ### end Alembic commands ###
