@@ -21,7 +21,7 @@ Posts, likes, a paginated feed, blocking and a posts visibility setting, on top 
 | `POST /v1/auth/logout` | – | Delete the access token cookie |
 | `GET /v1/users/me` | cookie | Your own account (including email) with your full profile (including theme) |
 | `PATCH /v1/users/me` | cookie | Change your username |
-| `PATCH /v1/users/me/profile` | cookie | Change display name, bio, pronouns, accent color or theme. Send only the fields you want to change |
+| `PATCH /v1/users/me/profile` | cookie | Change display name, bio, pronouns, accent color, theme or posts visibility. Send only the fields you want to change |
 | `GET /v1/users/{username}` | optional | Public account (id, username, join date) with its public profile (no theme). Case-insensitive lookup. `404` if either of you has blocked the other |
 | `GET /v1/users/{username}/posts` | optional | One user's posts, newest first, paginated like the feed |
 | `PUT /v1/users/{username}/block` | cookie | Block a user (idempotent) |
@@ -168,7 +168,7 @@ Do not put `?sslmode=...` in the URLs: asyncpg doesn't understand libpq query pa
 - **Silent blocks.** Blocking someone who has already blocked you still returns `204`. A `404` or `409` would tell them "this person blocked you". Each block row belongs to its blocker, so unblocking only removes your own block.
 - **Blocking removes likes** between the two users in both directions, in one set-based `DELETE` (the counter triggers adjust `like_count`). The block and the delete run in one transaction.
 - **Self-blocks** are rejected in the service (`400`) and by a `CHECK (blocker_id <> blocked_id)` constraint in the database.
-- **Posts visibility** (`everybody` (default) / `logged-in` / `nobody`) is a profile setting that applies to all of a user's posts. Logged-out viewers only see `everybody`. Authors always see their own posts. The profile itself stays public.
+- **Posts visibility** (`everybody` (default) / `logged-in` / `nobody`) is a profile setting that applies to all of a user's posts. Logged-out viewers only see `everybody`. Authors always see their own posts. The profile itself stays public. Set it with `PATCH /v1/users/me/profile` (`{"visibility": "nobody"}`). Only you see your setting (in `/users/me`). Sending `null` is a `422` rather than a reset to the default: a buggy client must never silently make hidden posts public (fail closed).
 
 ## Deployment
 

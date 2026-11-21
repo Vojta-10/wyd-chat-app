@@ -6,10 +6,11 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    ValidationInfo,
     field_validator,
 )
 
-from app.core.constants import AllowedThemes
+from app.core.constants import AllowedPostsVisibility, AllowedThemes
 from app.utils.validations import reject_control_chars
 
 type AccentColor = Annotated[
@@ -47,6 +48,7 @@ class UserProfilePublicBase(BaseModel):
 
 class UserProfileSelfBase(UserProfilePublicBase):
     theme: AllowedThemes
+    visibility: AllowedPostsVisibility
 
 
 class UserProfilePatch(BaseModel):
@@ -57,12 +59,13 @@ class UserProfilePatch(BaseModel):
     bio: Bio | None = None
     theme: AllowedThemes | None = None
     pronouns: Pronouns | None = None
+    visibility: AllowedPostsVisibility | None = None
 
-    @field_validator("display_name", mode="before")
+    @field_validator("display_name", "visibility", mode="before")
     @classmethod
-    def enforce_non_null_display_name(cls, v: Any) -> Any:
+    def enforce_non_null_display_name(cls, v: Any, info: ValidationInfo) -> Any:
         if v is None:
-            raise ValueError("Display name must not be null")
+            raise ValueError(f"{info.field_name} must not be null")
         return v
 
     @field_validator("bio", mode="before")
