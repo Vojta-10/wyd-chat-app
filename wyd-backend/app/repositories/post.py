@@ -1,7 +1,9 @@
+from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, or_, select
+from sqlalchemy import Row, Select, and_, delete, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
@@ -13,10 +15,20 @@ from app.models.user import User
 from app.models.user_block import UserBlock
 from app.models.user_profile import UserProfile
 
+type PostRow = Row[UUID, str, int, datetime, datetime, str, str | None, str, str, bool]
+type PostSelect = Select[
+    UUID, str, int, datetime, datetime, str, str | None, str, str, bool
+]
+
+type PostsFeed = Sequence[
+    Row[UUID, str, int, datetime, datetime, str, str | None, str, str, bool]
+]
 POST_UPDATEABLE_COLUMN_SET: frozenset[str] = frozenset(["description"])
 
 
-def get_sql_stmt_post_info(user_id: UUID | None):
+def get_sql_stmt_post_info(
+    user_id: UUID | None,
+) -> PostSelect:
     exists_subq1 = (
         select(UserBlock.blocker_id)
         .where(Post.user_id == UserBlock.blocker_id, UserBlock.blocked_id == user_id)
@@ -37,7 +49,6 @@ def get_sql_stmt_post_info(user_id: UUID | None):
             User.username,
             UserProfile.accent_color,
             func.coalesce(UserProfile.pronouns, "").label("pronouns"),
-            UserProfile.pronouns,
             func.coalesce(UserProfile.display_name, User.username).label(
                 "display_name"
             ),
@@ -65,7 +76,7 @@ async def get_feed(
     cursor: UUID | None,
     page_size: int = 20,
     target_user_id: UUID | None = None,
-):
+) -> PostsFeed:
     stmt = get_sql_stmt_post_info(user_id)
     if target_user_id is not None:
         stmt = stmt.where(Post.user_id == target_user_id)
@@ -73,8 +84,7 @@ async def get_feed(
         stmt = stmt.where(Post.id < cursor)
     stmt = stmt.order_by(Post.id.desc()).limit(page_size + 1)
     result = await session.execute(stmt)
-    result = result.all()
-    return result
+    return result.all()
 
 
 async def get_post_by_id(session: AsyncSession, post_id: UUID) -> Post | None:
@@ -86,7 +96,7 @@ async def get_post_by_id(session: AsyncSession, post_id: UUID) -> Post | None:
 
 async def get_post_by_id_full_user_info(
     session: AsyncSession, post_id: UUID, user_id: UUID | None = None
-):
+) -> PostRow | None:
     stmt = get_sql_stmt_post_info(user_id).where(Post.id == post_id)
     result = await session.execute(stmt)
     return result.first()
@@ -118,7 +128,7 @@ async def patch_post(
     return post
 
 
-async def like_post(session: AsyncSession, post_id: UUID, user_id: UUID):
+async def like_post(session: AsyncSession, post_id: UUID, user_id: UUID) -> None:
     stmt = (
         insert(PostLike)
         .values(post_id=post_id, user_id=user_id)
@@ -127,7 +137,7 @@ async def like_post(session: AsyncSession, post_id: UUID, user_id: UUID):
     await session.execute(stmt)
 
 
-async def unlike_post(session: AsyncSession, post_id: UUID, user_id: UUID):
+async def unlike_post(session: AsyncSession, post_id: UUID, user_id: UUID) -> None:
     stmt = delete(PostLike).where(
         PostLike.user_id == user_id, PostLike.post_id == post_id
     )
@@ -136,7 +146,7 @@ async def unlike_post(session: AsyncSession, post_id: UUID, user_id: UUID):
 
 async def can_user_a_view_user_b_post(
     session: AsyncSession, a_id: UUID | None, b_id: UUID
-):
+) -> User | None:
     stmt = select(User).where(User.id == b_id, User.is_active).join(User.user_profile)
 
     if a_id is not None:

@@ -14,3 +14,17 @@ repos:
   rev: v8.30.1
   hooks:
     - id: gitleaks
+# mypy runs as a local hook, not via mirrors-mypy: the mirror uses an isolated
+# env without our dependencies and never finds wyd-backend/pyproject.toml.
+- repo: local
+  hooks:
+    - id: mypy
+      name: mypy (wyd-backend, strict)
+      # same command as by hand: project venv + project config
+      entry: uv run --directory wyd-backend mypy app
+      language: system
+      types: [python]
+      files: ^wyd-backend/
+      # mypy follows imports across files, so check the whole package,
+      # not just the staged files pre-commit would otherwise pass in
+      pass_filenames: false

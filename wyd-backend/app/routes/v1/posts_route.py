@@ -41,7 +41,7 @@ async def get_feed_posts(
     user: GetCurrentUserOptionalDep,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: UUID | None = None,
-):
+) -> PostPaginationOutput:
     return await get_format_feed(session, user, page_size, cursor)
 
 
@@ -54,7 +54,9 @@ async def get_feed_posts(
 @posts_router.get(
     "/{post_id}", status_code=status.HTTP_200_OK, response_model=PostPublic
 )
-async def get_post(session: SessionDep, post_id: UUID, user: GetCurrentUserOptionalDep):
+async def get_post(
+    session: SessionDep, post_id: UUID, user: GetCurrentUserOptionalDep
+) -> PostPublic:
     return await get_post_service(session, post_id, user)
 
 
@@ -67,7 +69,7 @@ async def get_post(session: SessionDep, post_id: UUID, user: GetCurrentUserOptio
 @posts_router.post("/", status_code=status.HTTP_201_CREATED, response_model=PostPublic)
 async def create_new_post(
     session: SessionDep, user: GetCurrentUserDep, payload: PostCreate
-):
+) -> PostPublic:
     return await create_post_service(session, user.id, payload)
 
 
@@ -84,8 +86,10 @@ async def create_new_post(
 #   - owner deletes own post with visibility "nobody" or "logged-in" -> 204
 #     (the author always sees their own posts)
 @posts_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_post(session: SessionDep, post_id: UUID, user: GetCurrentUserDep):
-    return await delete_post_service(session, post_id, user)
+async def delete_post(
+    session: SessionDep, post_id: UUID, user: GetCurrentUserDep
+) -> None:
+    await delete_post_service(session, post_id, user)
 
 
 # TODO(test): PATCH /v1/posts/{post_id} (security regression: IDOR, mass assignment)
@@ -104,7 +108,7 @@ async def delete_post(session: SessionDep, post_id: UUID, user: GetCurrentUserDe
 )
 async def patch_post(
     session: SessionDep, user: GetCurrentUserDep, post_id: UUID, payload: PostPatch
-):
+) -> PostPublic:
     excluded_payload = payload.model_dump(exclude_unset=True)
     return await patch_post_service(session, post_id, user, excluded_payload)
 
@@ -122,7 +126,9 @@ async def patch_post(
 @posts_router.put(
     "/{post_id}/like", status_code=status.HTTP_200_OK, response_model=PostPublic
 )
-async def like_post(session: SessionDep, user: GetCurrentUserDep, post_id: UUID):
+async def like_post(
+    session: SessionDep, user: GetCurrentUserDep, post_id: UUID
+) -> PostPublic:
     return await like_post_service(session, post_id, user)
 
 
@@ -137,5 +143,7 @@ async def like_post(session: SessionDep, user: GetCurrentUserDep, post_id: UUID)
 @posts_router.delete(
     "/{post_id}/like", status_code=status.HTTP_200_OK, response_model=PostPublic
 )
-async def unlike_post(session: SessionDep, user: GetCurrentUserDep, post_id: UUID):
+async def unlike_post(
+    session: SessionDep, user: GetCurrentUserDep, post_id: UUID
+) -> PostPublic:
     return await unlike_post_service(session, post_id, user)

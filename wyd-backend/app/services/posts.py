@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import PostForbiddenToAccess, PostNotFound, UserNotFound
 from app.models.user import User
 from app.repositories.post import (
+    PostRow,
     can_user_a_view_user_b_post,
     create_post,
     delete_post,
@@ -23,7 +24,7 @@ from app.repositories.user import (
 from app.schemas.post import PostCreate, PostPaginationOutput, PostPublic
 
 
-def one_row_to_post(row) -> PostPublic:
+def one_row_to_post(row: PostRow) -> PostPublic:
     return PostPublic.model_validate(
         {
             "id": row.id,
@@ -81,8 +82,8 @@ async def get_format_feed(
 async def create_post_service(
     session: AsyncSession, user_id: UUID, payload: PostCreate
 ) -> PostPublic:
-    post = await create_post(session, user_id, payload.description)
-    post = await get_post_by_id_full_user_info(session, post.id, user_id)
+    created_post = await create_post(session, user_id, payload.description)
+    post = await get_post_by_id_full_user_info(session, created_post.id, user_id)
     if post is None:
         raise PostNotFound()
     return one_row_to_post(post)
@@ -98,7 +99,7 @@ async def get_post_service(
     return one_row_to_post(post)
 
 
-async def delete_post_service(session: AsyncSession, post_id: UUID, user: User):
+async def delete_post_service(session: AsyncSession, post_id: UUID, user: User) -> None:
     post = await get_post_by_id(session, post_id)
     if (
         post is None
@@ -126,10 +127,10 @@ async def patch_post_service(
     updated_post = await patch_post(session, post, payload)
     if updated_post is None:
         raise PostNotFound()
-    post = await get_post_by_id_full_user_info(session, post_id, user.id)
-    if post is None:
+    full_post = await get_post_by_id_full_user_info(session, post_id, user.id)
+    if full_post is None:
         raise PostNotFound()
-    return one_row_to_post(post)
+    return one_row_to_post(full_post)
 
 
 async def like_post_service(
