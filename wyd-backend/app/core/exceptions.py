@@ -6,7 +6,7 @@ class InvalidCredentials(Exception):
     pass
 
 
-async def invalid_credentials_handler(request: Request, exc: Exception):
+async def invalid_credentials_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"detail": "Invalid credentials"},
@@ -17,7 +17,9 @@ class EmailAlreadyRegistered(Exception):
     pass
 
 
-async def email_already_registered_handler(request: Request, exc: Exception):
+async def email_already_registered_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": "Email already registered"},
@@ -28,7 +30,7 @@ class UsernameTaken(Exception):
     pass
 
 
-async def username_taken_handler(request: Request, exc: Exception):
+async def username_taken_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": "Username already in use"},
@@ -39,7 +41,7 @@ class InactiveAccount(Exception):
     pass
 
 
-async def inactive_account_handler(request: Request, exc: Exception):
+async def inactive_account_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Account is inactive"}
     )
@@ -49,7 +51,7 @@ class InvalidToken(Exception):
     pass
 
 
-async def invalid_token_handler(request: Request, exc: Exception):
+async def invalid_token_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"detail": "Invalid token"},
@@ -83,7 +85,7 @@ class UserNotFound(Exception):
     pass
 
 
-async def user_not_found_handler(request: Request, exc: Exception):
+async def user_not_found_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND, content={"detail": "User not found"}
     )
@@ -93,7 +95,7 @@ class PostNotFound(Exception):
     pass
 
 
-async def post_not_found_handler(request: Request, exc: Exception):
+async def post_not_found_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND, content={"detail": "Post not found"}
     )
@@ -103,7 +105,9 @@ class PostForbiddenToAccess(Exception):
     pass
 
 
-async def post_forbidden_to_access_handler(request: Request, exc: Exception):
+async def post_forbidden_to_access_handler(
+    request: Request, exc: Exception
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_403_FORBIDDEN, content={"detail": "Post not accessible"}
     )
@@ -113,7 +117,7 @@ class BlockSelfError(Exception):
     pass
 
 
-async def block_self_error_handler(request: Request, exc: Exception):
+async def block_self_error_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content={"detail": "Can not block yourself"},

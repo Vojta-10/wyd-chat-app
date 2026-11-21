@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from asyncpg import UniqueViolationError
+from asyncpg import UniqueViolationError  # type: ignore[import-untyped]
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession

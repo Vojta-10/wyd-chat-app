@@ -140,7 +140,7 @@ async def delete_likes_both_directions(
 
 async def user_block_check_both_direction(
     session: AsyncSession, user: User, target_user_id: UUID
-):
+) -> Any | None:
     result = await session.execute(
         select(1).where(
             exists().where(

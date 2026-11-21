@@ -61,12 +61,12 @@ app.add_exception_handler(BlockSelfError, block_self_error_handler)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, str]:
     return {"message": "Hello World!"}
 
 
 @app.get("/health")
-async def db_health(session: SessionDep):
+async def db_health(session: SessionDep) -> dict[str, str]:
     await session.execute(select(1))
     return {"message": "DB connection OK"}
 

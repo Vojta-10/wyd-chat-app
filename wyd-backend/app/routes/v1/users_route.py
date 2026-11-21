@@ -4,6 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, Query, status
 
 from app.dependencies import GetCurrentUserDep, GetCurrentUserOptionalDep, SessionDep
+from app.models.user import User
+from app.models.user_profile import UserProfile
 from app.schemas.post import PostPaginationOutput
 from app.schemas.user import (
     UserPatch,
@@ -31,7 +33,7 @@ users_router = APIRouter(tags=["users"])
 #   - profile row missing -> 200 with user_profile: null, and NO row is created
 #     (GET never self-heals)
 @users_router.get("/me", response_model=UserSelf)
-async def get_me(current_user: GetCurrentUserDep):
+async def get_me(current_user: GetCurrentUserDep) -> User:
     return current_user
 
 
@@ -52,7 +54,7 @@ async def get_user_by_username(
     session: SessionDep,
     username: Annotated[str, username_constraint],
     user: GetCurrentUserOptionalDep,
-):
+) -> User:
     return await get_public_profile(session, username, user)
 
 
@@ -65,7 +67,9 @@ async def get_user_by_username(
 #   - own username with different case (Bobby -> bobby) -> 200
 #   - updated_at moves forward after a real change
 @users_router.patch("/me", status_code=status.HTTP_200_OK, response_model=UserSelf)
-async def update_me(session: SessionDep, user: GetCurrentUserDep, payload: UserPatch):
+async def update_me(
+    session: SessionDep, user: GetCurrentUserDep, payload: UserPatch
+) -> User:
     excluded_payload = payload.model_dump(exclude_unset=True)
     return await update_user_fields(session, user, excluded_payload)
 
@@ -80,7 +84,7 @@ async def update_me(session: SessionDep, user: GetCurrentUserDep, payload: UserP
 )
 async def update_me_profile(
     session: SessionDep, user: GetCurrentUserDep, payload: UserProfilePatch
-):
+) -> UserProfile:
     excluded_payload = payload.model_dump(exclude_unset=True)
     return await update_user_profile(session, user, excluded_payload)
 
@@ -104,7 +108,7 @@ async def get_users_posts(
     user: GetCurrentUserOptionalDep,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     cursor: UUID | None = None,
-):
+) -> PostPaginationOutput:
     return await get_format_feed(session, user, page_size, cursor, username)
 
 
@@ -113,7 +117,7 @@ async def block_user(
     session: SessionDep,
     user: GetCurrentUserDep,
     username: Annotated[str, username_constraint],
-):
+) -> None:
     await block_user_service(session, user, username)
 
 
@@ -122,5 +126,5 @@ async def unblock_user(
     session: SessionDep,
     user: GetCurrentUserDep,
     username: Annotated[str, username_constraint],
-):
+) -> None:
     await delete_block_service(session, user, username)
