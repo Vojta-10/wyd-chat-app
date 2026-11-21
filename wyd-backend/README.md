@@ -8,9 +8,11 @@ This is a learning and portfolio project, built milestone by milestone with a st
 
 > The database (Neon) scales to zero when idle, so the first request after a quiet period can take about a second longer.
 
-## Status: M1, accounts ✅ (`v0.1.0`)
+## Status: M2, social ✅ (`v0.2.0`)
 
-Accounts with Argon2id password hashing, a JWT access token in an httpOnly cookie, and customizable profiles, deployed on Railway. Previous release: `v0.0.1` (M0, walking skeleton). Next: M2, social (posts, likes, feed, blocking).
+Posts, likes, a paginated feed, blocking and a posts visibility setting, on top of M1's accounts (Argon2id, JWT access token in an httpOnly cookie, customizable profiles). Deployed on Railway. Previous releases: `v0.1.0` (M1, accounts), `v0.0.1` (M0, walking skeleton). Next: H1, hardening (tests, CI, refresh tokens, CSRF, rate limits).
+
+"Optional" auth means the endpoint works logged out, and a valid cookie personalizes the answer (`is_liked`, blocks, posts visibility).
 
 | Endpoint | Auth | What it does |
 |---|---|---|
@@ -19,12 +21,22 @@ Accounts with Argon2id password hashing, a JWT access token in an httpOnly cooki
 | `POST /v1/auth/logout` | – | Delete the access token cookie |
 | `GET /v1/users/me` | cookie | Your own account (including email) with your full profile (including theme) |
 | `PATCH /v1/users/me` | cookie | Change your username |
-| `PATCH /v1/users/me/profile` | cookie | Change display name, bio, pronouns, accent color or theme. Send only the fields you want to change |
-| `GET /v1/users/{username}` | – | Public account (id, username, join date) with its public profile (no theme). Case-insensitive lookup |
+| `PATCH /v1/users/me/profile` | cookie | Change display name, bio, pronouns, accent color, theme or posts visibility. Send only the fields you want to change |
+| `GET /v1/users/{username}` | optional | Public account (id, username, join date) with its public profile (no theme). Case-insensitive lookup. `404` if either of you has blocked the other |
+| `GET /v1/users/{username}/posts` | optional | One user's posts, newest first, paginated like the feed |
+| `PUT /v1/users/{username}/block` | cookie | Block a user (idempotent) |
+| `DELETE /v1/users/{username}/block` | cookie | Remove *your* block on a user (idempotent) |
+| `GET /v1/posts/` | optional | The feed: everyone's visible posts, newest first. `page_size` 1–100 (default 20), `cursor` = the previous page's `next_cursor` |
+| `GET /v1/posts/{post_id}` | optional | One post, same shape as a feed item |
+| `POST /v1/posts/` | cookie | Create a post (`description`, 1–256 characters) |
+| `PATCH /v1/posts/{post_id}` | cookie | Edit your own post's description |
+| `DELETE /v1/posts/{post_id}` | cookie | Delete your own post (its likes go with it) |
+| `PUT /v1/posts/{post_id}/like` | cookie | Like a post (idempotent). Returns the post with the new `like_count` |
+| `DELETE /v1/posts/{post_id}/like` | cookie | Remove your like (idempotent) |
 | `GET /health` | – | Runs `SELECT 1` against Postgres |
 | `GET /docs` | – | Interactive API docs (intentionally public until the frontend exists) |
 
-**Try it in Swagger UI:** `register` → `login` (the browser stores the cookie) → `GET /v1/users/me` → `PATCH /v1/users/me/profile` with e.g. `{"bio": "hi", "accent_color": "#ff8800"}`.
+**Try it in Swagger UI:** `register` → `login` (the browser stores the cookie) → `POST /v1/posts/` with `{"description": "hello WYD"}` → `PUT /v1/posts/{post_id}/like` → `GET /v1/posts/?page_size=5`, then pass the returned `next_cursor` as `cursor` for the next page.
 
 Profile fields:
 
@@ -63,7 +75,7 @@ wyd-backend/
 │   ├── repositories/      # DB queries only
 │   ├── services/          # business rules; raise domain exceptions, know nothing about HTTP
 │   ├── routes/v1/         # thin HTTP routers: parse → call service → return a schema
-│   ├── utils/             # DB error → domain error translation
+│   ├── utils/             # DB error → domain error translation, shared validators
 │   └── scripts/           # dev tools (print_ddl: show the DDL the models generate)
 ├── alembic/               # migrations (async env.py)
 ├── example.env            # every setting with dummy values (committed)
@@ -138,6 +150,26 @@ Do not put `?sslmode=...` in the URLs: asyncpg doesn't understand libpq query pa
 - **Eager loading by design.** The `user_profile` relationship is configured with `lazy="raise"`: an accidental lazy load (which would be an implicit, async-unsafe query) fails loudly instead of quietly running extra queries. Every user query loads the profile explicitly with `joinedload` (one query with a `LEFT OUTER JOIN`).
 - **Known limitation:** because format characters are rejected, emoji sequences joined with a zero-width joiner (`U+200D`, e.g. 👨‍👩‍👧 or 🏳️‍🌈) are rejected in display names, bios and pronouns. Single emoji like 😀 work. Allowing ZWJ only inside valid emoji sequences would need an emoji-sequence parser, so it's out of scope for now.
 
+### Posts, likes and feed (M2)
+
+- **Keyset (cursor) pagination, not `OFFSET`.** The feed is ordered by post id (UUIDv7, so newest first) and each page asks for `id < cursor`. A new post arriving between two page loads can't shift the pages, so there are no duplicates and no skipped posts, and Postgres doesn't have to read past all the earlier rows. The query fetches `page_size + 1` rows: the extra row only tells whether another page exists. A user's posts use an index on `(user_id, id)` (checked with `EXPLAIN`).
+- **One query builder for every post read.** The feed, a user's posts, a single post and the response after a write all use the same select, so a post looks the same everywhere and the block and visibility rules can't be forgotten in one place. Columns are selected explicitly with real joins (no `joinedload` aliases), and the author's display name falls back to the username with `COALESCE`.
+- **Idempotent likes.** A like is a row in `post_likes` with the composite primary key `(user_id, post_id)`, inserted with `ON CONFLICT DO NOTHING`: liking twice is harmless and can't fail with a race. Like/unlike use `PUT`/`DELETE`, the idempotent HTTP methods.
+- **`like_count` is kept by the database.** `AFTER INSERT` / `AFTER DELETE` triggers on `post_likes` update the counter, so every way of adding or removing a like (including cascades when a user or post is deleted) keeps it right, and a `CHECK (like_count >= 0)` guards it. Reading a viral post's count stays a single column read instead of a `COUNT(*)`.
+- **`is_liked`** is a correlated `EXISTS` per post for the current viewer (always `false` when logged out), served by the primary key index.
+- **Ownership checks in the service.** Editing or deleting someone else's post is a `403` if you can see it, and a `404` if it's hidden from you (blocked either way, visibility, or an inactive author), so the status code doesn't reveal that the post exists. Post schemas use `extra="forbid"` and the repository has a column allowlist, so `user_id` or `like_count` can't be changed through `PATCH` (mass assignment).
+- **Descriptions** follow the same text rules as profiles: trimmed, 1–256 characters, line breaks allowed (`\r\n` stored as `\n`), control and format characters rejected.
+- **Reserved usernames** (route words like `settings` or `block`, and impersonation names like `admin` or `support`) are rejected case-insensitively on register *and* on username change.
+
+### Blocking and visibility (M2)
+
+- **A block hides both directions.** If either user has blocked the other, they can't see each other's profile, posts or likes, and get the same `404` as for something that doesn't exist. The rule is a `NOT EXISTS` against `user_blocks` inside the SQL query, not a filter in Python after `LIMIT`: filtering afterwards would return short or empty pages and end pagination early.
+- **Can't see it → `404`; can see it but can't change it → `403`.** Editing or deleting a post you can't see is a `404` too, so the response doesn't confirm that a hidden post exists.
+- **Silent blocks.** Blocking someone who has already blocked you still returns `204`. A `404` or `409` would tell them "this person blocked you". Each block row belongs to its blocker, so unblocking only removes your own block.
+- **Blocking removes likes** between the two users in both directions, in one set-based `DELETE` (the counter triggers adjust `like_count`). The block and the delete run in one transaction.
+- **Self-blocks** are rejected in the service (`400`) and by a `CHECK (blocker_id <> blocked_id)` constraint in the database.
+- **Posts visibility** (`everybody` (default) / `logged-in` / `nobody`) is a profile setting that applies to all of a user's posts. Logged-out viewers only see `everybody`. Authors always see their own posts. The profile itself stays public. Set it with `PATCH /v1/users/me/profile` (`{"visibility": "nobody"}`). Only you see your setting (in `/users/me`). Sending `null` is a `422` rather than a reset to the default: a buggy client must never silently make hidden posts public (fail closed).
+
 ## Deployment
 
 - **Railway** (Hobby plan) web service in the **EU West (Amsterdam)** region, auto-deploys from `main`. Moved from Render's free tier in M1 because its cold starts (up to a minute after idling) made the live demo unusable.
@@ -159,9 +191,12 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 |---|---|---|
 | Logout only deletes the cookie. The access JWT is stateless and stays valid until `exp` (`JWT_ACCESS_TOKEN_LIFETIME`, 10–60 min) | A token copied before logout (e.g. from a shared or compromised device) still works: the holder can read and change the account until it expires, and the server can't tell | H1: short-lived access token (5–15 min) + rotating, revocable refresh token |
 | No CSRF token | State-changing requests rely on the cookie's `SameSite=Strict`, which stops cross-site requests in modern browsers but not attacks from a same-site origin | H1: signed double-submit token + required custom header |
-| No rate limiting | Register and login allow unlimited attempts (password guessing, email enumeration), and every attempt costs an Argon2 hash. Public profiles can be scraped. `/health` hits the database on every call | H1 |
-| Public profiles are readable without logging in | Anyone can check whether a username exists and see its join date and public profile fields (usernames are public by design) | M2: blocking + privacy setting; H1: rate limiting |
-| No reserved usernames | Anyone can register names like `admin` or `support` (impersonation). A future `/users/<word>` route would collide with a user of that name | Before M2 adds new `/users/...` routes |
+| No rate limiting | Register and login allow unlimited attempts (password guessing, email enumeration), and every attempt costs an Argon2 hash. Public profiles and the feed can be scraped. Posts and likes can be spammed. `/health` hits the database on every call | H1 |
+| Public profiles are readable without logging in | Anyone can check whether a username exists and see its join date and public profile fields (usernames are public by design). Only posts have a visibility setting | H1: rate limiting; a profile privacy setting is not scheduled |
+| Blocks and visibility only apply to the logged-in account | A blocked user who logs out, or registers a second account, can see `everybody` posts again. `logged-in` means "anyone with an account", and registration is open, so it is not private. Only `nobody` hides posts from everyone | Accepted: inherent to public content. To be explained in the UI (F1) |
+| Display names can impersonate | Reserved names only cover usernames, and only exact matches (`wyd_support` is allowed). A display name like "WYD Support" is allowed | F1: always show `@username` next to the display name |
+| Like vs. block race | If a block lands between a like's visibility check and its insert, that like survives the block (very narrow window) | Later: make the insert itself conditional (`INSERT … SELECT … WHERE NOT EXISTS`) |
+| Blocking a deactivated account returns `204`, while its profile returns `404` | Reveals that a deactivated account with that username exists | Small fix, not scheduled |
 | No security headers (CSP, HSTS, nosniff…), no `TrustedHostMiddleware`, no request body size limit | Low: the API serves only JSON, no HTML pages. Oversized bodies are parsed before field limits reject them | H1 |
 | `/docs` is public | Intentional: the live docs are the demo until the frontend exists | F1 |
 | One Neon role per branch with full privileges (no separate least-privilege app role vs. migration role) | A SQL injection or leaked app credential could run DDL | later |
@@ -179,7 +214,7 @@ Being explicit about what is *not* done yet. Each item is scheduled for a milest
 |---|---|---|
 | **M0 Walking skeleton** ✅ | v0.0.1 | live `/health` |
 | **M1 Accounts** ✅ | v0.1.0 | live Swagger `/docs` |
-| M2 Social: posts, likes, feed, blocking | v0.2.0 | live Swagger `/docs` |
+| **M2 Social: posts, likes, feed, blocking** ✅ | v0.2.0 | live Swagger `/docs` |
 | H1 Hardening: tests, CI, refresh rotation, CSRF, rate limits | v0.3.0 | green CI, security write-up |
 | F1 Frontend (React + Vite + TS) | v0.4.0 | real UI |
 | M3 Realtime DMs over WebSockets | v0.5.0 | two browsers chatting |

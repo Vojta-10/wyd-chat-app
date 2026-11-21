@@ -10,7 +10,7 @@ from app.core.exceptions import DisallowedUpdateField, UserProfileInsertError
 from app.models.user_profile import UserProfile
 
 USER_PROFILE_UPDATEABLE_COLUMN_SET: frozenset[str] = frozenset(
-    ["display_name", "bio", "pronouns", "theme", "accent_color"]
+    ["display_name", "bio", "pronouns", "theme", "accent_color", "visibility"]
 )
 
 

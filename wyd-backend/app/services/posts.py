@@ -103,7 +103,7 @@ async def delete_post_service(session: AsyncSession, post_id: UUID, user: User):
     if (
         post is None
         or await user_block_check_both_direction(session, user, post.user_id)
-        or not await can_user_a_view_user_b_post(session, user.id, post.id)
+        or not await can_user_a_view_user_b_post(session, user.id, post.user_id)
     ):
         raise PostNotFound()
     if post.user_id != user.id:
@@ -118,7 +118,7 @@ async def patch_post_service(
     if (
         post is None
         or await user_block_check_both_direction(session, user, post.user_id)
-        or not await can_user_a_view_user_b_post(session, user.id, post.id)
+        or not await can_user_a_view_user_b_post(session, user.id, post.user_id)
     ):
         raise PostNotFound()
     if post.user_id != user.id:
