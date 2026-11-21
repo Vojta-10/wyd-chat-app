@@ -37,9 +37,6 @@ async def get_public_profile(
         )
     ):
         raise UserNotFound()
-    # TODO(M2): if the viewer and this user have blocked each other (either
-    #   direction), raise the same UserNotFound. Also respect the profile's
-    #   privacy setting once it exists.
     return target_user
 
 

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import PostForbiddenToAccess, PostNotFound, UserNotFound
 from app.models.user import User
 from app.repositories.post import (
+    can_user_a_view_user_b_post,
     create_post,
     delete_post,
     get_feed,
@@ -99,7 +100,11 @@ async def get_post_service(
 
 async def delete_post_service(session: AsyncSession, post_id: UUID, user: User):
     post = await get_post_by_id(session, post_id)
-    if post is None:
+    if (
+        post is None
+        or await user_block_check_both_direction(session, user, post.user_id)
+        or not await can_user_a_view_user_b_post(session, user.id, post.id)
+    ):
         raise PostNotFound()
     if post.user_id != user.id:
         raise PostForbiddenToAccess()
@@ -110,7 +115,11 @@ async def patch_post_service(
     session: AsyncSession, post_id: UUID, user: User, payload: dict[str, Any]
 ) -> PostPublic:
     post = await get_post_by_id(session, post_id)
-    if post is None:
+    if (
+        post is None
+        or await user_block_check_both_direction(session, user, post.user_id)
+        or not await can_user_a_view_user_b_post(session, user.id, post.id)
+    ):
         raise PostNotFound()
     if post.user_id != user.id:
         raise PostForbiddenToAccess()
@@ -131,6 +140,8 @@ async def like_post_service(
         raise PostNotFound()
     await like_post(session, post_id, user.id)
     post = await get_post_by_id_full_user_info(session, post_id, user_id=user.id)
+    if post is None:
+        raise PostNotFound()
     return one_row_to_post(post)
 
 
@@ -142,4 +153,6 @@ async def unlike_post_service(
         raise PostNotFound()
     await unlike_post(session, post_id, user.id)
     post = await get_post_by_id_full_user_info(session, post_id, user.id)
+    if post is None:
+        raise PostNotFound()
     return one_row_to_post(post)

@@ -130,3 +130,21 @@ async def unlike_post(session: AsyncSession, post_id: UUID, user_id: UUID):
         PostLike.user_id == user_id, PostLike.post_id == post_id
     )
     await session.execute(stmt)
+
+
+async def can_user_a_view_user_b_post(
+    session: AsyncSession, a_id: UUID | None, b_id: UUID
+):
+    stmt = (
+        select(User)
+        .where(
+            User.id == b_id,
+        )
+        .join(User.user_profile)
+    )
+
+    if a_id is not None:
+        stmt = stmt.where(UserProfile.visibility != "nobody")
+    else:
+        stmt = stmt.where(UserProfile.visibility == "everybody")
+    return (await session.execute(stmt)).scalar_one_or_none()
