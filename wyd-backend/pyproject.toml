@@ -22,9 +22,11 @@ entrypoint = "app.main:app"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.7.0",
     "ruff>=0.17.6",
 ]
 
+[tool.ruff]
 [tool.ruff.lint]
 extend-select = ["B", "E", "T", "S"]
 unfixable = ["S"]
