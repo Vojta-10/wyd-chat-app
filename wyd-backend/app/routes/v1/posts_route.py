@@ -76,6 +76,12 @@ async def create_new_post(
 #   - owner deletes -> 204 with an empty body, then GET -> 404
 #   - unknown id -> 404; deleting twice -> second call 404
 #   - the post's post_likes rows are gone too (FK cascade)
+#   - hidden post -> 404, NOT 403 (403 would reveal that the post exists):
+#       - A blocked B, or B blocked A -> B deletes A's post -> 404
+#       - A's visibility is "nobody" -> B deletes A's post -> 404
+#       - A's visibility is "logged-in" -> B (logged in) deletes it -> 403
+#   - owner deletes own post with visibility "nobody" or "logged-in" -> 204
+#     (the author always sees their own posts)
 @posts_router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_post(session: SessionDep, post_id: UUID, user: GetCurrentUserDep):
     return await delete_post_service(session, post_id, user)
@@ -89,6 +95,9 @@ async def delete_post(session: SessionDep, post_id: UUID, user: GetCurrentUserDe
 #   - owner patches -> updated_at moves, like_count and created_at unchanged
 #   - unknown id -> 404
 #   - race: post deleted between the ownership check and the flush -> 404, not 500
+#   - hidden post -> 404, NOT 403: blocked in either direction, or visibility
+#     "nobody" and B isn't the author. Visible but not yours -> 403
+#   - owner patches own post with visibility "nobody" or "logged-in" -> 200
 @posts_router.patch(
     "/{post_id}", status_code=status.HTTP_200_OK, response_model=PostPublic
 )
@@ -105,6 +114,10 @@ async def patch_post(
 #   - like twice -> second call 200, like_count unchanged, still one post_likes row
 #   - unknown post -> 404; post by an inactive author -> 404
 #   - user A's like doesn't make is_liked true for user B
+#   - blocked in either direction, or a hidden post (visibility) -> 404, no
+#     post_likes row is written
+#   - post deleted (or a block lands) between the like and the re-read -> 404,
+#     never a 500
 @posts_router.put(
     "/{post_id}/like", status_code=status.HTTP_200_OK, response_model=PostPublic
 )
@@ -118,6 +131,8 @@ async def like_post(session: SessionDep, user: GetCurrentUserDep, post_id: UUID)
 #   - unlike a post you never liked -> 200, like_count unchanged (never below 0)
 #   - user B's unlike never removes user A's like
 #   - unknown post -> 404
+#   - blocked in either direction / hidden post -> 404
+#   - post deleted between the unlike and the re-read -> 404, never a 500
 @posts_router.delete(
     "/{post_id}/like", status_code=status.HTTP_200_OK, response_model=PostPublic
 )

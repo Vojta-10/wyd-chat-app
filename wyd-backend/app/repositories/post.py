@@ -78,7 +78,9 @@ async def get_feed(
 
 
 async def get_post_by_id(session: AsyncSession, post_id: UUID) -> Post | None:
-    post = await session.get(Post, post_id)
+    post = await session.scalar(
+        select(Post).where(Post.id == post_id, User.is_active == True).join(Post.user)
+    )
     return post
 
 
@@ -137,14 +139,14 @@ async def can_user_a_view_user_b_post(
 ):
     stmt = (
         select(User)
-        .where(
-            User.id == b_id,
-        )
+        .where(User.id == b_id, User.is_active == True)
         .join(User.user_profile)
     )
 
     if a_id is not None:
-        stmt = stmt.where(UserProfile.visibility != "nobody")
+        stmt = stmt.where(
+            or_(UserProfile.visibility != "nobody", UserProfile.user_id == a_id)
+        )
     else:
         stmt = stmt.where(UserProfile.visibility == "everybody")
     return (await session.execute(stmt)).scalar_one_or_none()
