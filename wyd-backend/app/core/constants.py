@@ -1,7 +1,7 @@
 from typing import Final, Literal, TypedDict
 
 ISSUER = "wyd api"
-ACCESS_TOKEN_AUDIENCE = "access_token"
+ACCESS_TOKEN_AUDIENCE = "access_token"  # noqa: S105
 ACCESS_COOKIE_NAME = "__Host-bearer-token"
 AllowedThemes = Literal["light", "dark", "system"]
 AllowedPostsVisibility = Literal["everybody", "logged-in", "nobody"]

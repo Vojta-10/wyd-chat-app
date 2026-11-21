@@ -24,7 +24,7 @@ class UserProfile(Base):
     accent_color: Mapped[str | None] = mapped_column(VARCHAR)
 
     visibility: Mapped[str] = mapped_column(VARCHAR, server_default="everybody")
-    user: Mapped["User"] = relationship(back_populates="user_profile")
+    user: Mapped[User] = relationship(back_populates="user_profile")
 
     __table_args__ = (
         CheckConstraint(

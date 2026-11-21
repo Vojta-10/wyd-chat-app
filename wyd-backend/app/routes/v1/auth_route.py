@@ -31,7 +31,8 @@ async def login(
         key=ACCESS_COOKIE_NAME,
         value=token,
         max_age=settings.JWT_ACCESS_TOKEN_LIFETIME
-        * 60,  # max_age parameter in seconds, our env in minutes therefore * 60 to get seconds
+        * 60,  # max_age parameter in seconds, our env in /
+        # minutes therefore * 60 to get seconds
         **AUTH_COOKIE_OPTIONS,
     )
     return user

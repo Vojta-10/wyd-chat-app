@@ -25,7 +25,8 @@ posts_router = APIRouter(tags=["posts"])
 
 # TODO(test): GET /v1/posts/ (feed)
 #   - logged out -> 200, every is_liked is false
-#   - logged in -> is_liked true only for posts *this* user liked (not another user's likes)
+#   - logged in -> is_liked true only for posts /
+#   *this* user liked (not another user's likes)
 #   - posts by inactive authors are not in the feed
 #   - paging: page_size=N returns N items, next_cursor continues without gaps
 #     or duplicates, last page has has_more false

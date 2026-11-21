@@ -47,7 +47,7 @@ def get_sql_stmt_post_info(user_id: UUID | None):
         )
         .join(Post.user)
         .outerjoin(User.user_profile)
-        .where(User.is_active == True)
+        .where(User.is_active)
         .where(~exists_subq1, ~exists_subq2)
     )
     if user_id is None:
@@ -79,7 +79,7 @@ async def get_feed(
 
 async def get_post_by_id(session: AsyncSession, post_id: UUID) -> Post | None:
     post = await session.scalar(
-        select(Post).where(Post.id == post_id, User.is_active == True).join(Post.user)
+        select(Post).where(Post.id == post_id, User.is_active).join(Post.user)
     )
     return post
 
@@ -137,11 +137,7 @@ async def unlike_post(session: AsyncSession, post_id: UUID, user_id: UUID):
 async def can_user_a_view_user_b_post(
     session: AsyncSession, a_id: UUID | None, b_id: UUID
 ):
-    stmt = (
-        select(User)
-        .where(User.id == b_id, User.is_active == True)
-        .join(User.user_profile)
-    )
+    stmt = select(User).where(User.id == b_id, User.is_active).join(User.user_profile)
 
     if a_id is not None:
         stmt = stmt.where(

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import Boolean, Index, String, func
@@ -26,7 +26,7 @@ class User(Base):
         onupdate=func.now(),
     )
 
-    user_profile: Mapped[Optional["UserProfile"]] = relationship(
+    user_profile: Mapped[UserProfile | None] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,

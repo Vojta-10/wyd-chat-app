@@ -9,6 +9,7 @@ Create Date: 2026-11-16 16:06:03.533050
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -39,7 +40,8 @@ def upgrade() -> None:
         $$;
     """)
     op.execute("""
-            CREATE TRIGGER increment_like_count_after_liking_post AFTER INSERT ON post_likes
+            CREATE TRIGGER increment_like_count_after_liking_post 
+            AFTER INSERT ON post_likes
             FOR EACH ROW EXECUTE FUNCTION increment_like_count()
     """)
     op.execute("""
@@ -54,7 +56,8 @@ def upgrade() -> None:
             $$;
     """)
     op.execute("""
-                CREATE TRIGGER decrement_like_count_after_unliking_post AFTER DELETE ON post_likes
+                CREATE TRIGGER decrement_like_count_after_unliking_post 
+                AFTER DELETE ON post_likes
                 FOR EACH ROW EXECUTE FUNCTION decrement_like_count()
     """)
     # ### end Alembic commands ###

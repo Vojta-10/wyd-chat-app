@@ -9,6 +9,7 @@ Create Date: 2026-11-11 19:48:18.367219
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -49,7 +50,8 @@ def upgrade() -> None:
         CREATE FUNCTION create_user_profile() RETURNS trigger 
         LANGUAGE plpgsql as $$
         BEGIN
-            INSERT INTO user_profiles (user_id, display_name) VALUES (NEW.id, NEW.username);
+            INSERT INTO user_profiles (user_id, display_name)
+            VALUES (NEW.id, NEW.username);
             RETURN NULL;
         END;
         $$;
