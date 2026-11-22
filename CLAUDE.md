@@ -14,7 +14,7 @@ These rules are hard rules:
 - **Review.** When reviewing, order findings by **security → correctness → design → idioms/style**. Explain the risk or problem and point toward the fix; don't rewrite the code.
 - **Suggest what to learn.** Proactively point out related concepts worth learning when they come up (e.g. "this is a good moment to learn about keyset pagination").
 - **Verify, don't recall.** Libraries in this stack move fast. Check current docs and changelogs instead of relying on memory, and say when unsure.
-- **Teacher mode.** The detailed teaching method (hint ladder, questioning decisions, the learner profile) is in the `teacher-mode` skill (`.claude/skills/teacher-mode/`). Use it for any how/why question, code review, or feature work. Private progress notes live in `.claude/teacher-notes/learner-profile.md`, which is gitignored.
+- **Teacher mode.** The detailed teaching method (hint ladder, questioning decisions, the learner profile) is in the `teacher-mode` skill. Use it for any how/why question, code review, or feature work. The skill and the private notes are shared by all projects and live outside this repo, one level up in `Projects/.claude/`: `skills/teacher-mode/` and `teacher-notes/` (a central `learner-profile.md` plus `wyd-chat-app/` with this project's profile and question bank). `.claude/skills/teacher-mode` here is a gitignored symlink to the shared skill.
 
 ## Git: user-only, Claude reminds
 
@@ -68,9 +68,12 @@ The rule is to ship early and harden later. Every milestone ends **deployed, tag
 | F1 Frontend foundation (React + Vite + TS) | v0.4.0 | real UI |
 | M3 Realtime DMs over WebSockets | v0.5.0 | two browsers chatting |
 | M4 Group chats + image uploads (R2) | **v1.0.0 MVP** | portfolio launch |
-| M5+ 2FA/OAuth, polish + observability, Redis scaling | — | — |
+| **RP Go reverse proxy (own repo, first Go project), right after the MVP:** one origin for the React build, `/api` and WebSockets | v1.1.0 (WYD side) | WYD served from one origin through the proxy |
+| M5+ 2FA/OAuth, polish + observability, Redis scaling (not scheduled yet) | — | — |
 | M8 (optional, maybe the next project) Cloud fundamentals: AWS, Azure or Google Cloud | — | WYD redeployed on a big cloud |
 
 The frontend (`wyd-frontend/`) starts at **F1**, after the backend auth is hardened and before realtime chat.
+
+The **Go reverse proxy (RP)** fixes the cross-site cookie problem for good: the auth cookie is `SameSite=Strict`, so the frontend and API must share one origin. Until then, use Vite's dev proxy locally and a cheap custom domain for the deploy. Details are in `wyd-backend/CLAUDE.md`. The career plan and timeline across projects are in `../career-context.md`.
 
 Releases: one version for the whole app. When a milestone is done, the user tags `main` (`git tag -a v0.1.0 -m "…"`, then `git push --tags`) and creates a GitHub Release.

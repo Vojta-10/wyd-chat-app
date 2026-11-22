@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
+/Claude outputs
 # Virtual Environment
 venv/
 env/
@@ -52,6 +52,6 @@ Temporary Items
 
 .env
 
-# Claude Code: private learning notes + personal settings
-.claude/teacher-notes/
+# Claude Code: symlink to the shared teacher-mode skill (lives in Projects/.claude/) + personal settings
+.claude/skills/teacher-mode
 .claude/settings.local.json
