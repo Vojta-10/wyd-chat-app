@@ -78,7 +78,7 @@ async def run_async_migrations() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
         connect_args={
-            "ssl": create_default_context(),
+            "ssl": create_default_context() if get_settings().TLS else "disable",
         },
     )
 

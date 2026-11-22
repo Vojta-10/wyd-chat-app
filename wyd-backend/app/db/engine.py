@@ -17,7 +17,7 @@ async def initialize() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
         get_settings().DATABASE_URL_POOLING.get_secret_value(),
         echo=in_dev,
         connect_args={
-            "ssl": ssl.create_default_context(),
+            "ssl": ssl.create_default_context() if get_settings().TLS else "disable",
         },
         pool_pre_ping=True,
         hide_parameters=True,

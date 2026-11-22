@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str]
     JWT_SECRET: SecretStr = Field(min_length=43)
     JWT_ACCESS_TOKEN_LIFETIME: int = Field(ge=10, le=60)
-    model_config = SettingsConfigDict(env_file=f"{Path(__file__).parents[2]}/.env")
+    TLS: bool = True
+    model_config = SettingsConfigDict(
+        env_file=f"{Path(__file__).parents[2]}/.env", extra="ignore"
+    )
 
 
 @lru_cache
