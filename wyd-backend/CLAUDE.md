@@ -227,7 +227,7 @@ Now that ~15 endpoints exist, manual re-testing hurts. That's the motivation. Do
 
 ### F1: Frontend foundation → `v0.4.0` (demo: a real UI)
 - **Build:** start `wyd-frontend/` (React + Vite + TS; write its own CLAUDE.md first) with login/register, profile, feed, posting, and likes. It calls the API with `credentials: "include"` and sends the CSRF header. Deploy it as a static site.
-- **Key lesson:** the **same-site cookie problem** (see Security → Cookies). Pick a custom domain (recommended; ~$10/yr) or a reverse proxy *before* debugging why login "doesn't work".
+- **Key lesson:** the **same-site cookie problem** (see Security → Cookies). Decided (2026-11-22): use Vite's dev proxy locally and a cheap custom domain (~$10/yr) for the deploy. The Go reverse proxy comes right after the MVP (see **RP** below). Set this up *before* debugging why login "doesn't work".
 - After F1, disable `/docs` in production.
 
 ### M3: Realtime DMs → `v0.5.0` (demo: two browsers chatting live)
@@ -240,7 +240,16 @@ Now that ~15 endpoints exist, manual re-testing hurts. That's the motivation. Do
 - **Learn:** RBAC, presigned URLs, upload attacks, image processing.
 - **Launch:** a polished README with an architecture diagram, screenshots, a security write-up (what you implemented and why), a demo account, and seed data.
 
-### Post-MVP (order is flexible; pick what interests you)
+### RP: Go reverse proxy → WYD `v1.1.0` (right after the MVP)
+The immediate next step after `v1.0.0`, planned for mid-February to end of March 2027. The proxy is its own repo and the user's first Go project, hand-written. WYD's side of the switch ships as `v1.1.0`. Decided 2026-11-22; the full context is in `Projects/career-context.md`.
+- **Why:** WYD's auth cookie is `SameSite=Strict`. If the frontend and the API sit on different hosting domains, they're cross-site, so the browser drops the cookie and login silently breaks.
+- **Fix:** one origin. The proxy serves the React build and forwards `/api` and the WebSocket to FastAPI, so the cookie settings stay unchanged.
+- **Proxy design:** config-driven, with routes defined in YAML. Must get right: WebSocket upgrades, forwarded headers, and locking down direct access to the backend.
+- **WYD side:** trust forwarded headers only from the proxy (this replaces `--forwarded-allow-ips="*"`, which lets clients spoof their IP). Make the backend reachable only through the proxy. Re-check CORS, the WebSocket Origin check and TrustedHost for the single origin.
+- **Safety net until then:** Vite's dev proxy locally and a cheap custom domain for the first deploy (F1), so a proxy bug can't break a demo.
+- **Later:** it grows into project 2's API gateway: multi-service routing, JWT checks at the gate, rate limiting, request IDs and health checks.
+
+### Post-MVP (after the reverse proxy; not scheduled yet, order is flexible)
 - **M5: Advanced auth:** TOTP 2FA + backup codes + step-up auth; OAuth with GitHub and Google.
 - **M6: Polish and observability:** typing indicators, read receipts, unread counts, presence, notifications; structlog JSON logs, request IDs, OpenTelemetry, audit log; a multi-stage non-root Dockerfile.
 - **M7: Scale:** run 2 workers, watch chat and rate limiting break *on purpose*, then fix them with Redis pub/sub and Redis-backed rate limits.
