@@ -1,6 +1,7 @@
 import os
 from collections.abc import AsyncGenerator
 from pathlib import Path
+from uuid import UUID
 
 import dotenv
 import pytest
@@ -12,7 +13,9 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
+from app.core.constants import ACCESS_COOKIE_NAME
 from app.dependencies import get_db_session
+from tests.helpers import TEST_PASSWORD, LoginUser, UserResponse
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -64,7 +67,34 @@ async def client_fixture(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
         return session
 
     app.dependency_overrides[get_db_session] = get_session_override
-    client = AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1")
+    client = AsyncClient(transport=ASGITransport(app=app), base_url="https://127.0.0.1")
     yield client
     app.dependency_overrides.clear()
     await client.aclose()
+
+
+@pytest.fixture(name="login")
+async def login_user_fixture(
+    client: AsyncClient,
+) -> LoginUser:
+    async def _login_user(
+        *, username: str, password: str = TEST_PASSWORD, email: str
+    ) -> UserResponse:
+        register = await client.post(
+            "/v1/auth/register",
+            json={"username": username, "password": password, "email": email},
+        )
+        assert register.status_code == 201
+        user = await client.post(
+            "/v1/auth/login", json={"password": password, "email": email}
+        )
+        assert user.status_code == 200
+        response = await client.get("/v1/users/me")
+        assert response.status_code == 200
+        return UserResponse(
+            username=response.json()["username"],
+            id=UUID(response.json()["id"]),
+            cookie=user.cookies[ACCESS_COOKIE_NAME],
+        )
+
+    return _login_user
