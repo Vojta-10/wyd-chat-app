@@ -1,11 +1,18 @@
 import os
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 import dotenv
 import pytest
 from alembic.command import upgrade
 from alembic.config import Config
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.core.config import get_settings
+from app.dependencies import get_db_session
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -24,30 +31,40 @@ def pytest_configure(config: pytest.Config) -> None:
     upgrade(alembic_cfg, "heads")
 
 
-# @pytest.fixture(name="session")
-# async def session_fixture() -> AsyncGenerator:
-#     engine = create_async_engine(
-#         get_settings().DATABASE_URL_POOLING.get_secret_value(),
-#         echo=True,
-#         pool_pre_ping=True,
-#         hide_parameters=True,
-#     )
-#     session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+@pytest.fixture(name="session")
+async def session_fixture() -> AsyncGenerator[AsyncSession]:
+    engine = create_async_engine(
+        get_settings().DATABASE_URL_POOLING.get_secret_value(),
+        echo=True,
+    )
+    session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
 
-#     try:
-#         async with engine.connect() as conn:
-#             await conn.execute(select(1))
-#     except Exception:
-#         await engine.dispose()
-#         raise
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(select(1))
+    except Exception:
+        await engine.dispose()
+        raise
 
-#     session = session_factory()
-#     try:
-#         yield session
-#         await session.commit()
-#     except Exception:
-#         await session.rollback()
-#         raise
-#     finally:
-#         await session.close()
-#     await engine.dispose()
+    session = session_factory()
+
+    try:
+        yield session
+    finally:
+        await session.rollback()
+        await session.close()
+    await engine.dispose()
+
+
+@pytest.fixture(name="client")
+async def client_fixture(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
+    from app.main import app
+
+    async def get_session_override() -> AsyncSession:
+        return session
+
+    app.dependency_overrides[get_db_session] = get_session_override
+    client = AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1")
+    yield client
+    app.dependency_overrides.clear()
+    await client.aclose()
