@@ -24,3 +24,11 @@ async def test_login(login: LoginUser) -> None:
     )
     assert user.username == "ahojda123"
     assert user.cookie
+
+
+async def test_logout(client: AsyncClient, login: LoginUser) -> None:
+    await login(username="ahojda123", email="vojta@example.com")
+    logout = await client.post("/v1/auth/logout")
+    assert logout.status_code == 200
+    me = await client.get("/v1/users/me")
+    assert me.status_code == 401
