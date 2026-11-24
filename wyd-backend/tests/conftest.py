@@ -1,5 +1,5 @@
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from uuid import UUID
 
@@ -7,15 +7,15 @@ import dotenv
 import pytest
 from alembic.command import upgrade
 from alembic.config import Config
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
-from app.core.constants import ACCESS_COOKIE_NAME
 from app.dependencies import get_db_session
-from tests.helpers import TEST_PASSWORD, LoginUser, UserResponse
+from tests.helpers import TEST_PASSWORD, ClientFactory, LoginUser, UserResponse
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -59,27 +59,27 @@ async def session_fixture() -> AsyncGenerator[AsyncSession]:
     await engine.dispose()
 
 
-@pytest.fixture(name="client")
-async def client_fixture(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
+@pytest.fixture(name="session_override")
+def session_override_fixture(session: AsyncSession) -> Generator[FastAPI]:
     from app.main import app
 
     async def get_session_override() -> AsyncSession:
         return session
 
     app.dependency_overrides[get_db_session] = get_session_override
-    client = AsyncClient(transport=ASGITransport(app=app), base_url="https://127.0.0.1")
-    yield client
+    yield app
     app.dependency_overrides.clear()
-    await client.aclose()
 
 
 @pytest.fixture(name="login")
 async def login_user_fixture(
-    client: AsyncClient,
+    create_client: ClientFactory,
 ) -> LoginUser:
     async def _login_user(
         *, username: str, password: str = TEST_PASSWORD, email: str
     ) -> UserResponse:
+
+        client = create_client()
         register = await client.post(
             "/v1/auth/register",
             json={"username": username, "password": password, "email": email},
@@ -94,7 +94,27 @@ async def login_user_fixture(
         return UserResponse(
             username=response.json()["username"],
             id=UUID(response.json()["id"]),
-            cookie=user.cookies[ACCESS_COOKIE_NAME],
+            client=client,
         )
 
     return _login_user
+
+
+@pytest.fixture(name="create_client")
+async def client_factory_fixture(
+    session_override: FastAPI,
+) -> AsyncGenerator[ClientFactory]:
+    clients: list[AsyncClient] = []
+
+    def _create_client() -> AsyncClient:
+
+        client = AsyncClient(
+            transport=ASGITransport(app=session_override), base_url="https://127.0.0.1"
+        )
+        clients.append(client)
+        return client
+
+    yield _create_client
+
+    for client in clients:
+        await client.aclose()

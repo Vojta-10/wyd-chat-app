@@ -1,15 +1,20 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
+from httpx import AsyncClient
+
 TEST_PASSWORD = "secret123123"
+
+type ClientFactory = Callable[[], AsyncClient]
 
 
 @dataclass
 class UserResponse:
     username: str
     id: UUID
-    cookie: str
+    client: AsyncClient
 
 
 class LoginUser(Protocol):
