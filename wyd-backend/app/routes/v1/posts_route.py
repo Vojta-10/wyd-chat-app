@@ -106,13 +106,6 @@ async def patch_post(
 
 
 # TODO(test): like (PUT)
-#   - not logged in -> 401
-#   - like -> 200, is_liked true, like_count +1 (check the DB too)
-#   - like twice -> second call 200, like_count unchanged, still one post_likes row
-#   - unknown post -> 404; post by an inactive author -> 404
-#   - user A's like doesn't make is_liked true for user B
-#   - blocked in either direction, or a hidden post (visibility) -> 404, no
-#     post_likes row is written
 #   - post deleted (or a block lands) between the like and the re-read -> 404,
 #     never a 500
 @posts_router.put(

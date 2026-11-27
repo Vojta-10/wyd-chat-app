@@ -400,3 +400,13 @@ async def test_post_like_a_like_doesnt_make_b_is_liked_true(
     owner_fetch = await owner.client.get(f"/v1/posts/{created_post.id}")
     assert owner_fetch.status_code == 200
     assert owner_fetch.json()["is_liked"] is False
+
+
+async def test_post_like_not_logged_in(
+    post: PostType, create_client: ClientFactory
+) -> None:
+    created_post, _ = post
+    client = create_client()
+
+    response = await client.put(f"/v1/posts/{created_post.id}/like")
+    assert response.status_code == 401
