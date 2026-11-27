@@ -326,3 +326,77 @@ async def test_post_like_unknown_post_inactive_author(
         )
         assert like_count is not None
         assert like_count == created_post.like_count
+
+
+async def test_post_like_happy_path(
+    post: PostType, login: LoginUser, session: AsyncSession
+) -> None:
+    created_post, _ = post
+    stranger = await login(username="Vojta123", email="vojta123@example.com")
+
+    like = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+    assert like.status_code == 200
+    assert like.json()["is_liked"] is True
+    assert like.json()["like_count"] == 1
+
+    refetch = await stranger.client.get(f"/v1/posts/{created_post.id}")
+    assert refetch.status_code == 200
+
+    assert refetch.json()["is_liked"] is True
+
+    like_count = await session.scalar(
+        select(func.count(PostLike.post_id)).where(PostLike.post_id == created_post.id)
+    )
+
+    post_fetch = await stranger.client.get(f"/v1/posts/{created_post.id}")
+    assert post_fetch.status_code == 200
+
+    assert post_fetch.json()["like_count"] == like_count
+    assert like_count is not None
+    assert like_count == 1
+
+
+async def test_post_like_twice(
+    post: PostType, login: LoginUser, session: AsyncSession
+) -> None:
+    created_post, _ = post
+    stranger = await login(username="Vojta123", email="vojta123@example.com")
+
+    first_like = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+    assert first_like.status_code == 200
+    assert first_like.json()["is_liked"] is True
+    assert first_like.json()["like_count"] == 1
+
+    second_like = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+    assert second_like.status_code == 200
+    assert first_like.json()["is_liked"] is True
+    assert first_like.json()["like_count"] == 1
+
+    like_count = await session.scalar(
+        select(func.count(PostLike.post_id)).where(PostLike.post_id == created_post.id)
+    )
+
+    post_fetch = await stranger.client.get(f"/v1/posts/{created_post.id}")
+    assert post_fetch.status_code == 200
+
+    assert post_fetch.json()["like_count"] == like_count
+    assert like_count is not None
+    assert like_count == 1
+
+
+async def test_post_like_a_like_doesnt_make_b_is_liked_true(
+    post: PostType, login: LoginUser
+) -> None:
+    created_post, owner = post
+    stranger = await login(username="Vojta123", email="vojta123@example.com")
+
+    first_like = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+    assert first_like.status_code == 200
+
+    stranger_fetch = await stranger.client.get(f"/v1/posts/{created_post.id}")
+    assert stranger_fetch.status_code == 200
+    assert stranger_fetch.json()["is_liked"] is True
+
+    owner_fetch = await owner.client.get(f"/v1/posts/{created_post.id}")
+    assert owner_fetch.status_code == 200
+    assert owner_fetch.json()["is_liked"] is False
