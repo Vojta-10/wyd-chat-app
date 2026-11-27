@@ -369,8 +369,8 @@ async def test_post_like_twice(
 
     second_like = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
     assert second_like.status_code == 200
-    assert first_like.json()["is_liked"] is True
-    assert first_like.json()["like_count"] == 1
+    assert second_like.json()["is_liked"] is True
+    assert second_like.json()["like_count"] == 1
 
     like_count = await session.scalar(
         select(func.count(PostLike.post_id)).where(PostLike.post_id == created_post.id)

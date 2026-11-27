@@ -93,7 +93,6 @@ async def delete_post(
 
 
 # TODO(test): PATCH /v1/posts/{post_id} (security regression: IDOR, mass assignment)
-#   - body with "user_id" / "like_count" / "id" -> 422 (extra="forbid")
 #   - race: post deleted between the ownership check and the flush -> 404, not 500
 @posts_router.patch(
     "/{post_id}", status_code=status.HTTP_200_OK, response_model=PostPublic
