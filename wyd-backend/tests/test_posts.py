@@ -4,11 +4,13 @@ from uuid import uuid7
 
 import httpx
 from pytest import Subtests, mark
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import AllowedPostsVisibility
 from app.models.post import Post
+from app.models.post_like import PostLike
+from app.models.user import User
 from app.schemas.post import PostPublic
 from tests.helpers import ClientFactory, LoginUser, PostType, UserResponse
 
@@ -255,3 +257,72 @@ async def test_patch_post_mass_assignment(
     assert response.status_code == 422
     assert response.json()["detail"][0]["type"] == "extra_forbidden"
     assert response.json()["detail"][0]["loc"] == ["body", attribute]
+
+
+@mark.parametrize("block_direction", ["owner_to_stranger", "stranger_to_owner"])
+async def test_post_like_blocked(
+    post: PostType, login: LoginUser, block_direction: str
+) -> None:
+    created_post, owner = post
+    stranger = await login(username="Vojta123", email="vojta123@example.com")
+
+    if block_direction == "owner_to_stranger":
+        block = await owner.client.put(f"/v1/users/{stranger.username}/block")
+        assert block.status_code == 204
+    elif block_direction == "stranger_to_owner":
+        block = await stranger.client.put(f"/v1/users/{owner.username}/block")
+        assert block.status_code == 204
+
+    like_response = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+    assert like_response.status_code == 404
+    assert like_response.json()["detail"] == "Post not found"
+
+    refetch = await owner.client.get(f"/v1/posts/{created_post.id}")
+    assert refetch.json()["like_count"] == created_post.like_count
+
+
+async def test_post_like_visibility_nobody(post: PostType, login: LoginUser) -> None:
+    created_post, owner = post
+    stranger = await login(username="Vojta123", email="vojta123@example.com")
+
+    set_visibility = await owner.client.patch(
+        "/v1/users/me/profile", json={"visibility": "nobody"}
+    )
+
+    assert set_visibility.status_code == 200
+
+    like_response = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+    assert like_response.status_code == 404
+    assert like_response.json()["detail"] == "Post not found"
+
+    refetch = await owner.client.get(f"/v1/posts/{created_post.id}")
+    assert refetch.json()["like_count"] == created_post.like_count
+
+
+async def test_post_like_unknown_post_inactive_author(
+    post: PostType, login: LoginUser, subtests: Subtests, session: AsyncSession
+) -> None:
+    created_post, user = post
+    stranger = await login(username="Vojta123", email="vojta123@example.com")
+    with subtests.test(msg="Like on unknown post"):
+        unknown_post = await stranger.client.put(f"/v1/posts/{uuid7()}/like")
+        assert unknown_post.status_code == 404
+        assert unknown_post.json()["detail"] == "Post not found"
+        refetch = await user.client.get(f"/v1/posts/{created_post.id}")
+        assert refetch.status_code == 200
+        assert refetch.json()["like_count"] == created_post.like_count
+
+    with subtests.test(msg="Like on post with inactive author"):
+        await session.execute(
+            update(User).where(User.id == user.id).values(is_active=False)
+        )
+        inactive_author = await stranger.client.put(f"/v1/posts/{created_post.id}/like")
+        assert inactive_author.status_code == 404
+        assert inactive_author.json()["detail"] == "Post not found"
+        like_count = await session.scalar(
+            select(func.count(PostLike.post_id)).where(
+                PostLike.post_id == created_post.id
+            )
+        )
+        assert like_count is not None
+        assert like_count == created_post.like_count
