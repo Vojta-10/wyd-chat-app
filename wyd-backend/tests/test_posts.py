@@ -238,3 +238,20 @@ async def test_patch_updated_at_moves_like_count_created_at_unchanged(
     assert validated_response.like_count == validated_post.like_count
     assert validated_response.created_at == validated_post.created_at
     assert validated_response.description == "updated description"
+
+
+@mark.parametrize(
+    "attribute, value",
+    [("id", str(uuid7())), ("user_id", str(uuid7())), ("like_count", 1000)],
+)
+async def test_patch_post_mass_assignment(
+    post: PostType, attribute: str, value: str | int
+) -> None:
+    created_post, user = post
+    response = await user.client.patch(
+        f"/v1/posts/{created_post.id}",
+        json={"description": "Updated Example", attribute: value},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["type"] == "extra_forbidden"
+    assert response.json()["detail"][0]["loc"] == ["body", attribute]
