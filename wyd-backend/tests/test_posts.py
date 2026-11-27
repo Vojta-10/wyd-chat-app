@@ -151,11 +151,10 @@ async def test_create_new_post_invalid_description(
 
 async def test_create_new_post_description_missing(login: LoginUser) -> None:
     user = await login(username="Vojta123", email="vojta@example.com")
-    response = await user.client.post(
-        "/v1/posts/",
-    )
+    response = await user.client.post("/v1/posts/", json={})
     assert response.status_code == 422
     assert response.json()["detail"][0]["type"] == "missing"
+    assert response.json()["detail"][0]["loc"] == ["body", "description"]
 
 
 async def test_create_new_post_new_line_normalize(login: LoginUser) -> None:
