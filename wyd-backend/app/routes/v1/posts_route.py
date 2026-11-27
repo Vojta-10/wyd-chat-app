@@ -93,16 +93,10 @@ async def delete_post(
 
 
 # TODO(test): PATCH /v1/posts/{post_id} (security regression: IDOR, mass assignment)
-#   - not logged in -> 401
-#   - user B patches user A's post -> 403 and the description is unchanged
 #   - body with "user_id" / "like_count" / "id" -> 422 (extra="forbid")
 #   - {"description": null} -> 422; {} -> 200 and nothing changes
 #   - owner patches -> updated_at moves, like_count and created_at unchanged
-#   - unknown id -> 404
 #   - race: post deleted between the ownership check and the flush -> 404, not 500
-#   - hidden post -> 404, NOT 403: blocked in either direction, or visibility
-#     "nobody" and B isn't the author. Visible but not yours -> 403
-#   - owner patches own post with visibility "nobody" or "logged-in" -> 200
 @posts_router.patch(
     "/{post_id}", status_code=status.HTTP_200_OK, response_model=PostPublic
 )

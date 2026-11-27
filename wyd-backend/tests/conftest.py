@@ -15,7 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import get_settings
 from app.dependencies import get_db_session
-from tests.helpers import TEST_PASSWORD, ClientFactory, LoginUser, UserResponse
+from app.schemas.post import PostPublic
+from tests.helpers import (
+    TEST_PASSWORD,
+    ClientFactory,
+    LoginUser,
+    PostType,
+    UserResponse,
+)
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -118,3 +125,15 @@ async def client_factory_fixture(
 
     for client in clients:
         await client.aclose()
+
+
+@pytest.fixture(name="post")
+async def create_post_fixture(login: LoginUser, session: AsyncSession) -> PostType:
+    user = await login(username="Vojta", email="vojta@example.com")
+
+    created_post = await user.client.post(
+        "/v1/posts/", json={"description": "Example post"}
+    )
+    assert created_post.status_code == 201
+    post = created_post.json()
+    return PostPublic.model_validate(post), user

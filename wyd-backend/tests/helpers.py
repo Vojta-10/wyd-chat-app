@@ -5,9 +5,14 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
+from app.schemas.post import PostPublic
+
 TEST_PASSWORD = "secret123123"
 
 type ClientFactory = Callable[[], AsyncClient]
+
+
+type PostType = tuple[PostPublic, UserResponse]
 
 
 @dataclass
